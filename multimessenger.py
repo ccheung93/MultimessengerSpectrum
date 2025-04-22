@@ -113,21 +113,17 @@ def E_from_uncert(ts):
 
 def exponentlabel(x, pos):
     return str("{:.0f}".format(np.log10(x)))
-    
-def plots(R,E,coupling_type,coupling_order):
-    m_bench = 1e-21 #in eV
-    m_bench2 = 1e-18
-    m_bench3 = 1e-15
-    ts_bench = 1
-    ts_bench2 = 1e2
 
+def determineDistance(R):
+    """ Returns distance in parsecs """
     if R == 1e4:
         distance = '10kpc'
     elif R == 1e7:
         distance = '10Mpc'
+    
+    return distance
 
-    wmp_contour = np.logspace(0,30,1000)
-
+def determineKparams(coupling_type, coupling_order):
     if coupling_type == 'photon':
         K_space = 6.3e-4
         K_E = 1.9e-3
@@ -155,6 +151,22 @@ def plots(R,E,coupling_type,coupling_order):
             ylabel = r'$\log_{10}(d^{(1)}_g)$'
         if coupling_order == 'quad':    
             ylabel = r'$\log_{10}(d^{(2)}_g)$'
+            
+    return K_space, K_E, K_atm, eta, ylabel
+    
+    
+def plots(R,E,coupling_type,coupling_order):
+    m_bench = 1e-21 #in eV
+    m_bench2 = 1e-18
+    m_bench3 = 1e-15
+    ts_bench = 1
+    ts_bench2 = 1e2
+
+    distance = determineDistance(R)
+
+    wmp_contour = np.logspace(0,30,1000)
+
+    K_space, K_E, K_atm, eta, ylabel = determineKparams(coupling_type, coupling_order)
 
     filename = distance+'_'+coupling_type+'_'+coupling_order+'_dilatoniccoupling.pdf'
 
