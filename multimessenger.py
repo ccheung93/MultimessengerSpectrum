@@ -162,7 +162,16 @@ def determineKparams(coupling_type, coupling_order):
             ylabel = r'$\log_{10}(d^{(2)}_g)$'
             
     return K_space, K_E, K_atm, eta, ylabel
-    
+
+def setup_axes(ax, i, j, formatter, coupling_order):
+    """ Set up axes for subplot (i, j) """
+    ax[i,j].xaxis.set_major_formatter(formatter)
+    ax[i,j].yaxis.set_major_formatter(formatter)
+    ax[i,j].set_xticks(np.logspace(-20,-6,7))
+    ax[i,j].set_xlim(.3e-20,0.9e-6)
+    if coupling_order == 'linear': 
+        ax[i,j].set_ylim(1e-9,0.9e0)
+    ax[i,j].tick_params(direction="in")
     
 def plots(R, E, coupling_type, coupling_order):
     m_bench = 1e-21 #in eV
@@ -179,7 +188,7 @@ def plots(R, E, coupling_type, coupling_order):
 
     filename = distance_label+'_'+coupling_type+'_'+coupling_order+'_dilatoniccoupling.pdf'
 
-    fig, ax = plt.subplots(2,2,figsize = (30,21),sharex = True, sharey = True)
+    fig, ax = plt.subplots(2, 2, figsize = (30, 21), sharex = True, sharey = True)
     plt.rcParams['mathtext.fontset'] = 'cm'
     plt.rcParams.update({'font.size': 35,'font.family':'STIXGeneral'})
     axis_font = {'fontname':'Times New Roman', 'size':'35'}
@@ -246,18 +255,11 @@ def plots(R, E, coupling_type, coupling_order):
     if coupling_order == 'linear':    
         for i in range(2):
             for j in range(2):
-                ax[i,j].xaxis.set_major_formatter(formatter)
-                ax[i,j].yaxis.set_major_formatter(formatter)
-                ax[i,j].set_xticks(np.logspace(-20,-6,7))
-                ax[i,j].set_xlim(.3e-20,0.9e-6)
-                ax[i,j].set_ylim(1e-9,0.9e0)
-                ax[i,j].tick_params(direction="in")
-
+                setup_axes(ax, i, j, formatter, coupling_order)
 
                 ax[i,j].plot(Elist,Microscope_m,color = 'gray',linewidth = 2)
                 ax[i,j].fill_between(Elist,Microscope_m,[1e50 for i in range(len(Elist))],color = 'gray',alpha = 0.1)
                 ax[i,j].text(3.5e-11,Microscope_m[0]*1.3,r'${\rm MICROSCOPE}$',color = 'k')
-                #ax[i,j].plot(EotWashEP_x,EotWashEP_y)
                 ax[i,j].plot(Elist,FifthForce_m)
                 colorlist = ["tab:red", "tab:orange",'tab:purple']
 
@@ -265,32 +267,24 @@ def plots(R, E, coupling_type, coupling_order):
                 ax[i,j].fill_between([1e-50,E_from_uncert(ts[i][j])],[1e-50,1e-50],[1e50,1e50], color = 'chocolate',alpha = 0.1)
 
                 ax[i,j].plot(m_bench*wmp_contour,d1_probe(Elist,signalduration(Etot,mass[i][j],Elist,ts[i][j],R,1)[0],eta),c = 'k',linewidth = 2,alpha = 1)
-#                 print(min(d1_probe(Elist,signalduration(Etot,mass[i][j],Elist,ts[i][j],R,1)[0],eta,Etot,mass[i][j],ts[i][j],R,1)))
                 ax[i,j].plot([mass[i][j],mass[i][j]],[1e-50,1e50],c = 'k',linestyle = '--')
                 ax[i,j].fill_between([1e-30,mass[i][j]],1e-50,1e50,facecolor = 'none',hatch = "/",edgecolor = 'k',alpha = 0.3)
-                #print(signalduration(Etot,mass[i][j],Elist,ts[i][j],R,1)[1])
-                if mass[i][j]>1e-20:
+                if mass[i][j] > 1e-20:
                     ax[i,j].text(mass[i][j]/2e2,1e-7,r'$\omega<m_{\phi}$',color = 'k',bbox=dict(facecolor='whitesmoke', alpha = 1, edgecolor='k',boxstyle='round,pad=.1'))
 
                 if R < 1e5:
                     fillregion_x = np.array([Elist[l] for l in range(len(Elist)) if all([Elist[l]>E_from_uncert(ts[i][j]), Elist[l]> mass[i][j]*omegaoverm_noscreen(dt_1day,R)])])
-        #             fillregion_y = [min([d_screen(fillregion_x,R_exp,rho_exp,mass[i][j])[l],d_from_delta_t(dt_1day,R,mass[i][j],fillregion_x,30e-6)[l]]) for l in range(len(fillregion_x))]
                     fillregion_y = [Microscope_m[l] for l in range(len(fillregion_x))]
 
                     ax[i,j].fill_between(fillregion_x,d1_probe(fillregion_x,signalduration(Etot,mass[i][j],fillregion_x,ts[i][j],R,1)[0],eta),fillregion_y,where= d1_probe(fillregion_x,signalduration(Etot,mass[i][j],fillregion_x,ts[i][j],R,1)[0],eta)< fillregion_y, color = 'tab:green',alpha = 0.3)
                     ax[i,j].plot(Elist, d_from_delta_t(dt_1day,R,mass[i][j],Elist,30e-6,K_space), color = colorlist[2],linewidth = 2,linestyle = '--'  )
                     ax[i,j].plot(Elist, d_from_delta_t(dt,R,mass[i][j],Elist,30e-6,K_space), color = colorlist[0],linewidth = 2,linestyle = '--'  )
-#                     print(min(d1_probe(fillregion_x,signalduration(Etot,mass[i][j],fillregion_x,ts[i][j],R,1)[0],eta,Etot,mass[i][j],ts[i][j],R,1)))
                 else:
                     fillregion_x = np.array([Elist[l] for l in range(len(Elist)) if all([Elist[l]>E_from_uncert(ts[i][j]), Elist[l]> mass[i][j]*omegaoverm_noscreen(dt_1day,R)])])
                     fillregion_y = [Microscope_m[l] for l in range(len(fillregion_x))]
-        #             fillregion_y = [min([d_screen(fillregion_x,R_exp,rho_exp,mass[i][j])[l],d_from_delta_t(dt_1day,R,mass[i][j],fillregion_x,1e-6)[l]]) for l in range(len(fillregion_x))]
                     ax[i,j].fill_between(fillregion_x,d1_probe(fillregion_x,signalduration(Etot,mass[i][j],fillregion_x,ts[i][j],R,1)[0],eta),fillregion_y,where= d1_probe(fillregion_x,signalduration(Etot,mass[i][j],fillregion_x,ts[i][j],R,1)[0],eta)< fillregion_y, color = 'tab:green',alpha = 0.3)
-#                     ax[i,j].fill_between(Elist,d_from_delta_t(dt_1day,R,mass[i][j],Elist,1e-6,K_space),d_from_delta_t(dt_1day,R,mass[i][j],Elist,30e-6,K_space),color = colorlist[2],alpha = 0.1)
-#                     ax[i,j].fill_between(Elist,d_from_delta_t(dt,R,mass[i][j],Elist,1e-6,K_space),d_from_delta_t(dt,R,mass[i][j],Elist,30e-6,K_space),color = colorlist[0],alpha = 0.1)
                     ax[i,j].plot(Elist, d_from_delta_t(dt_1day,R,mass[i][j],Elist,30e-6,K_space), color = colorlist[2],linewidth = 2,linestyle = '--'  )
                     ax[i,j].plot(Elist, d_from_delta_t(dt,R,mass[i][j],Elist,30e-6,K_space), color = colorlist[0],linewidth = 2,linestyle = '--'  )
-#                     print(min(d1_probe(fillregion_x,signalduration(Etot,mass[i][j],fillregion_x,ts[i][j],R,1)[0],eta,Etot,mass[i][j],ts[i][j],R,1)))
 
                 if filename == '10Mpc_'+coupling_type+'_linear_dilatoniccoupling.pdf':
                     ax[i,j].text(mass[i][j]*omegaoverm_noscreen(dt,R)/4,1e-7,r'$\delta t\, \gtrsim \, 1~{\rm yr}~ \uparrow $',rotation = 90, fontsize = 25, color = 'tab:red',bbox=dict(facecolor='white', alpha = 1, edgecolor='tab:red',boxstyle='round,pad=.1'))
@@ -300,14 +294,11 @@ def plots(R, E, coupling_type, coupling_order):
                         if i == 1:
                             if j == 1:
                                 ax[i,j].text(5e-12,4e-9,r'$E_{\rm tot} = M_{\odot}$'+'\n' +r'$R = 10~{\rm Mpc}$'+ '\n'+r'$\,\eta_{\rm DM} = 10^{-19}/5900$',bbox=dict(facecolor='tab:purple', alpha = 0.0,edgecolor = 'white',boxstyle='round,pad=.2'))
-
                     elif coupling_type == 'electron':
                         if i == 1:
                             if j == 1:
                                 ax[i,j].text(2e-11,4e-9,r'$E_{\rm tot} =  M_{\odot}$'+'\n' +r'$R = 10~{\rm Mpc}$'+ '\n'+r'$\,\eta_{\rm DM} = 10^{-17}$',bbox=dict(facecolor='tab:purple', alpha = 0.0,edgecolor = 'white',boxstyle='round,pad=.2'))
-
                     elif coupling_type == 'gluon':
-    #                     ax[i,j].set_ylim(.5e7,8e32)
                         if i == 1:
                             if j == 1:
                                 ax[i,j].text(2e-11,4e-9,r'$E_{\rm tot} =  M_{\odot}$'+'\n' +r'$R = 10~{\rm Mpc}$'+ '\n'+r'$\,\eta_{\rm DM} = 10^{-19}/10^5$',bbox=dict(facecolor='tab:purple', alpha = 0.0,edgecolor = 'white',boxstyle='round,pad=.2'))
@@ -315,8 +306,6 @@ def plots(R, E, coupling_type, coupling_order):
                 if filename == '10kpc_'+coupling_type+'_linear_dilatoniccoupling.pdf':
                     ax[i,j].text(mass[i][j]*omegaoverm_noscreen(dt,R)/4,1e-7,r'$\delta t\, \gtrsim \, 1~{\rm yr}~ \uparrow $',rotation = 90, fontsize = 25, color = 'tab:red',bbox=dict(facecolor='white', alpha = 1, edgecolor='tab:red',boxstyle='round,pad=.1'))
                     ax[i,j].text(mass[i][j]*omegaoverm_noscreen(dt_1day,R)/4,1e-7,r'$\delta t\, \gtrsim \, 1~{\rm day}~ \uparrow$',rotation = 90, fontsize = 25, color = 'tab:purple',bbox=dict(facecolor='white', alpha = 1, edgecolor='tab:purple',boxstyle='round,pad=.1'))
-        #             ax[i,j].text(3e-17,4e25,r'$\delta t\, \gtrsim \, 1~{\rm yr}~\uparrow$',rotation = 90, fontsize = 25, color = 'tab:red',bbox=dict(facecolor='white', alpha = 0.8, edgecolor='tab:red',boxstyle='round,pad=.1'))
-        #             ax[i,j].text(6e-16,2e25,r'$\delta t\, \gtrsim \, 1~{\rm day}~\uparrow$',rotation = 90, fontsize = 25, color = 'tab:purple',bbox=dict(facecolor='white', alpha = 0.8, edgecolor='tab:purple',boxstyle='round,pad=.1'))
                     if coupling_type == 'photon':
                         if i == 1:
                             if j == 1:
@@ -328,14 +317,11 @@ def plots(R, E, coupling_type, coupling_order):
                                 ax[i,j].text(2e-11,4e-9,r'$E_{\rm tot} = 10^{-2} M_{\odot}$'+'\n' +r'$R = 10~{\rm kpc}$'+ '\n'+r'$\,\eta_{\rm DM} = 10^{-17}$',bbox=dict(facecolor='tab:purple', alpha = 0.0,edgecolor = 'white',boxstyle='round,pad=.2'))
 
                     elif coupling_type == 'gluon':
-    #                     ax[i,j].set_ylim(.5e7,8e32)
                         if i == 1:
                             if j == 1:
                                 ax[i,j].text(2e-11,4e-9,r'$E_{\rm tot} = 10^{-2} M_{\odot}$'+'\n' +r'$R = 10~{\rm kpc}$'+ '\n'+r'$\,\eta_{\rm DM} = 10^{-19}/10^5$',bbox=dict(facecolor='tab:purple', alpha = 0.0,edgecolor = 'white',boxstyle='round,pad=.2'))
-
-                                #             ax[i,j].text(4e-20,2e29,r'$\omega_{\phi}\,t_{*} \lesssim \, 1$',color = 'tab:brown')
-                    #ax[i,j].text(E_from_uncert(ts[i][j])/2e2,3e29,r'$\omega_{\phi}\,t_{*} \lesssim \, 1$',color = 'tab:brown',bbox=dict(facecolor='white', alpha = 0.8, edgecolor='chocolate',boxstyle='round,pad=.1'))
                     ax[i,j].text(1e-20,1e-2,r'$\omega\,t_{*} \lesssim \, 2\pi$',color = 'tab:brown',bbox=dict(facecolor='white', alpha = 1, edgecolor='chocolate',boxstyle='round,pad=.1'))
+                    
                 ax[0,j].set_title(r'$\log_{10}(m_{\phi}/{\rm eV}) = $'+str(int(np.log10(mass[0][j]))), pad = 20)
                 ax[i,1].set_ylabel(r'$t_*$ = '+str(int(ts[i][0]))+r' s',labelpad = 40,rotation = 270)
                 ax[i,1].yaxis.set_label_position("right")
@@ -343,11 +329,7 @@ def plots(R, E, coupling_type, coupling_order):
     if coupling_order == 'quad':    
         for i in range(2):
             for j in range(2):
-                ax[i,j].xaxis.set_major_formatter(formatter)
-                ax[i,j].yaxis.set_major_formatter(formatter)
-                ax[i,j].set_xticks(np.logspace(-20,-6,7))
-                ax[i,j].set_xlim(.3e-20,0.9e-6)
-                ax[i,j].tick_params(direction="in")
+                setup_axes(ax, i, j, formatter, coupling_order)
 
                 ax[i,j].fill_between(Elist, d_screenearth(Elist,mass[i][j],K_E), 1e100, color = 'tab:blue', alpha = .05)
                 ax[i,j].plot(Elist,d_screen(Elist,R_atm,rho_atm,mass[i][j],K_atm), color = 'tab:blue',linestyle = 'dashed')
@@ -363,11 +345,8 @@ def plots(R, E, coupling_type, coupling_order):
 
 
                 ax[i,j].plot(m_bench*wmp_contour,d_probe(Elist,signalduration(Etot,mass[i][j],Elist,ts[i][j],R,1)[0],eta,Etot,mass[i][j],ts[i][j],R,1),c = 'k',linewidth = 2,alpha = 1)
-#                 ax[i,j].plot(m_bench*wmp_contour,d_probe(Elist,signalduration(Etot,mass[i][j],Elist,ts[i][j],R,1)[0],eta,Etot,2*mass[i][j],ts[i][j],R,1)/denom(Elist,rho_ISM*K_space,eta,Etot,ts[i][j],R,K_space),c = 'k',linewidth = 2,alpha = 1,linestyle = '--')
-#                 print(min(d_probe(Elist,signalduration(Etot,mass[i][j],Elist,ts[i][j],R,1)[0],eta,Etot,mass[i][j],ts[i][j],R,1)))
                 ax[i,j].plot([mass[i][j],mass[i][j]],[1e-10,1e50],c = 'k',linestyle = '--')
                 ax[i,j].fill_between([1e-30,mass[i][j]],1e-10,1e50,facecolor = 'none',hatch = "/",edgecolor = 'k',alpha = 0.3)
-                #print(signalduration(Etot,mass[i][j],Elist,ts[i][j],R,1)[1])
                 if mass[i][j]>1e-20:
                     ax[i,j].text(mass[i][j]/2e2,1e12,r'$\omega<m_{\phi}$',color = 'k',bbox=dict(facecolor='whitesmoke', alpha = 1, edgecolor='k',boxstyle='round,pad=.1'))
 
@@ -376,14 +355,7 @@ def plots(R, E, coupling_type, coupling_order):
                     ax[i,j].plot(Elist, d_from_delta_t(dt,R,mass[i][j],Elist,30e-6,K_space), color = colorlist[0],linewidth = 2,linestyle = '--'  )
                     fillregion_x = np.array([Elist[l] for l in range(len(Elist)) if Elist[l]>E_from_uncert(ts[i][j])])
                     fillregion_y = [min([d_screen(fillregion_x,R_exp,rho_exp,mass[i][j],K_E)[l],d_from_delta_t(dt_1day,R,mass[i][j],fillregion_x,30e-6,K_space)[l]]) for l in range(len(fillregion_x))]
-        #             fillregion2_x = np.array([Elist[l] for l in range(len(Elist)) if Elist[l]>E_from_uncert(ts[i][j])])
-        #             fillregion2_y = [max([d_screen(fillregion2_x,R_exp,rho_exp,mass[i][j])[l],d_from_delta_t(dt_1day,R,mass[i][j],fillregion2_x,1e-6)[l]]) if d_screen(fillregion2_x,R_exp,rho_exp,mass[i][j])[l] > d_from_delta_t(dt_1day,R,mass[i][j],fillregion2_x,1e-6)[l] else d_probe(fillregion2_x[l],signalduration(Etot,mass[i][j],fillregion2_x[l],ts[i][j],R,1)[0],eta) for l in range(len(fillregion2_x))]
                     ax[i,j].fill_between(fillregion_x,d_probe(fillregion_x,signalduration(Etot,mass[i][j],fillregion_x,ts[i][j],R,1)[0],eta,Etot,mass[i][j],ts[i][j],R,1),fillregion_y,where= d_probe(fillregion_x,signalduration(Etot,mass[i][j],fillregion_x,ts[i][j],R,1)[0],eta,Etot,mass[i][j],ts[i][j],R,1)< fillregion_y, color = 'tab:green',alpha = 0.3)
-        #             ax[i,j].fill_between(fillregion2_x,d_probe(fillregion2_x,signalduration(Etot,mass[i][j],fillregion2_x,ts[i][j],R,1)[0],eta),fillregion2_y,where= d_probe(fillregion2_x,signalduration(Etot,mass[i][j],fillregion2_x,ts[i][j],R,1)[0],eta)< fillregion2_y, color = 'tab:orange',alpha = 0.3)
-                    #ax[i,j].fill_between(fillregion2_x,[max(d_from_delta_t(dt_1day,R,mass[i][j],fillregion2_x,30e-6),d_probe(fillregion_x,signalduration(Etot,mass[i][j],fillregion_x,ts[i][j],R,1)[0],eta))],fillregion2_y,where= d_probe(fillregion2_x,signalduration(Etot,mass[i][j],fillregion2_x,ts[i][j],R,1)[0],eta)< fillregion2_y, color = 'tab:orange',alpha = 0.3)
-#                    print(min(d_probe(fillregion_x,signalduration(Etot,mass[i][j],fillregion_x,ts[i][j],R,1)[0],eta,Etot,mass[i][j],ts[i][j],R,1)))
-                    #ax[i,j].plot(fillregion2_x,fillregion2_y,linestyle = '-.',linewidth = 4, color = 'pink')
-
                 else:
                     ax[i,j].plot(Elist, d_from_delta_t(dt_1day,R,mass[i][j],Elist,1e-6,K_space), color = colorlist[2],linewidth = 2,linestyle = '--'  )
                     ax[i,j].plot(Elist, d_from_delta_t(dt,R,mass[i][j],Elist,1e-6,K_space), color = colorlist[0],linewidth = 2,linestyle = '--'  )
@@ -391,11 +363,7 @@ def plots(R, E, coupling_type, coupling_order):
                     ax[i,j].plot(Elist, d_from_delta_t(dt,R,mass[i][j],Elist,30e-6,K_space), color = colorlist[0],linewidth = 2,linestyle = '--'  )
                     fillregion_x = np.array([Elist[l] for l in range(len(Elist)) if Elist[l]>E_from_uncert(ts[i][j])])
                     fillregion_y = [min([d_screen(fillregion_x,R_exp,rho_exp,mass[i][j],K_E)[l],d_from_delta_t(dt_1day,R,mass[i][j],fillregion_x,1e-6,K_space)[l]]) for l in range(len(fillregion_x))]
-        #             fillregion2_x = np.array([Elist[l] for l in range(len(Elist)) if Elist[l]>E_from_uncert(ts[i][j])])
-        #             fillregion2_y = [max([d_screen(fillregion2_x,R_exp,rho_exp,mass[i][j])[l],d_from_delta_t(dt,R,mass[i][j],fillregion2_x,1e-6)[l]]) if d_screen(fillregion2_x,R_exp,rho_exp,mass[i][j])[l] > d_from_delta_t(dt_1day,R,mass[i][j],fillregion2_x,1e-6)[l] else d_probe(fillregion2_x[l],signalduration(Etot,mass[i][j],fillregion2_x[l],ts[i][j],R,1)[0],eta) for l in range(len(fillregion2_x))]
-        #             fillregion2_y = [min([d_screen(fillregion2_x,R_exp,rho_exp,mass[i][j])[l],d_from_delta_t(dt,R,mass[i][j],fillregion2_x,1e-6)[l]]) for l in range(len(fillregion2_x)) if d_screen(fillregion2_x,R_exp,rho_exp,mass[i][j])[l] < d_from_delta_t(dt_1day,R,mass[i][j],fillregion2_x,1e-6)[l] else d_screen(fillregion2_x,R_exp,rho_exp,mass[i][j])[l]]
                     ax[i,j].fill_between(fillregion_x,d_probe(fillregion_x,signalduration(Etot,mass[i][j],fillregion_x,ts[i][j],R,1)[0],eta,Etot,mass[i][j],ts[i][j],R,1),fillregion_y,where= d_probe(fillregion_x,signalduration(Etot,mass[i][j],fillregion_x,ts[i][j],R,1)[0],eta,Etot,mass[i][j],ts[i][j],R,1)< fillregion_y, color = 'tab:green',alpha = 0.3)
-        #             ax[i,j].fill_between(fillregion2_x,[max(d_probe(fillregion2_x,signalduration(Etot,mass[i][j],fillregion2_x,ts[i][j],R,1)[0],eta)[l],d_screen(fillregion2_x,R_exp,rho_exp,mass[i][j]))[l] for l in range(len(fillregion2_x))],fillregion2_y,where= d_probe(fillregion2_x,signalduration(Etot,mass[i][j],fillregion2_x,ts[i][j],R,1)[0],eta)< fillregion2_y, color = 'tab:orange',alpha = 0.3)
                     ax[i,j].fill_between(Elist,d_from_delta_t(dt_1day,R,mass[i][j],Elist,1e-6,K_space),d_from_delta_t(dt_1day,R,mass[i][j],Elist,30e-6,K_space),color = colorlist[2],alpha = 0.1)
                     ax[i,j].fill_between(Elist,d_from_delta_t(dt,R,mass[i][j],Elist,1e-6,K_space),d_from_delta_t(dt,R,mass[i][j],Elist,30e-6,K_space),color = colorlist[0],alpha = 0.1)
 
@@ -426,7 +394,6 @@ def plots(R, E, coupling_type, coupling_order):
                 if filename == '10Mpc_'+coupling_type+'_quad_dilatoniccoupling.pdf':
                     ax[i,j].text(mass[i][j]*omegaoverm_noscreen(dt,R)/4,1e16,r'$\delta t\, \gtrsim \, 1~{\rm yr}~ \uparrow $',rotation = 90, fontsize = 25, color = 'tab:red',bbox=dict(facecolor='white', alpha = 1, edgecolor='tab:red',boxstyle='round,pad=.1'))
                     ax[i,j].text(mass[i][j]*omegaoverm_noscreen(dt_1day,R)/4,1e16,r'$\delta t\, \gtrsim \, 1~{\rm day}~ \uparrow$',rotation = 90, fontsize = 25, color = 'tab:purple',bbox=dict(facecolor='white', alpha = 1, edgecolor='tab:purple',boxstyle='round,pad=.1'))
-#                     ax[i,j].text(E_from_uncert(ts[i][j])/2e2,3e29,r'$\omega\,t_{*} \lesssim \, 2\pi$',color = 'tab:brown',bbox=dict(facecolor='white', alpha = 0.8, edgecolor='chocolate',boxstyle='round,pad=.1'))
                     if coupling_type == 'photon':
                         ax[i,j].text(3e-13,2e12/K_E,r'$d_{e,{\rm crit}}^{(2)\, \rm\oplus}$', fontsize =35, color = 'tab:blue')
                         ax[i,j].text(1e-12,5e21/K_atm,r'$d_{e,{\rm crit}}^{(2)\, \rm atm}$', fontsize =35, color = 'tab:blue')
@@ -445,17 +412,10 @@ def plots(R, E, coupling_type, coupling_order):
                         ax[i,j].text(2e-13,2e11/K_E,r'$d_{g,{\rm crit}}^{(2)\, \rm\oplus}$', fontsize =35, color = 'tab:blue')
                         ax[i,j].text(2e-12,1e19/K_atm,r'$d_{g,{\rm crit}}^{(2)\, \rm atm}$', fontsize =35, color = 'tab:blue')
                         ax[i,j].text(5e-12,7e25/K_E,r'$d_{g,{\rm crit}}^{(2)\, \rm app}$', fontsize =35, color = 'tab:blue')
-#                         ax[i,j].set_ylim(.5e7,8e32)
                         if i == 1 and j==1:
                             ax[i,j].text(1e-11,1e5,r'$E_{\rm tot} = M_{\odot}$'+'\n' +r'$R = 10~{\rm Mpc}$'+ '\n'+r'$\,\eta_{\rm DM} = 10^{-19}/10^5$',bbox=dict(facecolor='tab:purple', alpha = 0.0,edgecolor = 'white',boxstyle='round,pad=.2'))
 
-#                     if i == 1:
-#                         if j == 1:
-#                             ax[i,j].text(1e-10,1e12,r'$E_{\rm tot} = M_{\odot}$'+'\n' +r'$R =$'+str(int(R/1e6))+r'$~{\rm Mpc}$'+ '\n'+r'$\,\eta = 10^{-19}$',bbox=dict(facecolor='tab:purple', alpha = 0.1,edgecolor = 'white',boxstyle='round,pad=.5'))
-
                 if filename == '10kpc_'+coupling_type+'_quad_dilatoniccoupling.pdf':
-        #             ax[i,j].text(mass[i][j]*omegaoverm_noscreen(dt,R)/4,1e16,r'$\delta t\, \gtrsim \, 1~{\rm yr}~ \uparrow $',rotation = 90, fontsize = 25, color = 'tab:red',bbox=dict(facecolor='white', alpha = 0.8, edgecolor='tab:red',boxstyle='round,pad=.1'))
-        #             ax[i,j].text(mass[i][j]*omegaoverm_noscreen(dt_1day,R)/4,1e16,r'$\delta t\, \gtrsim \, 1~{\rm day}~ \uparrow$',rotation = 90, fontsize = 25, color = 'tab:purple',bbox=dict(facecolor='white', alpha = 0.8, edgecolor='tab:purple',boxstyle='round,pad=.1'))
                     if coupling_type == 'photon':
                         ax[i,j].text(7e-15,2e13/K_E,r'$d_{e,{\rm crit}}^{(2)\, \rm\oplus}$', fontsize =35, color = 'tab:blue')
                         ax[i,j].text(2e-12,1e19/K_atm,r'$d_{e,{\rm crit}}^{(2)\, \rm atm}$', fontsize =35, color = 'tab:blue')
@@ -483,10 +443,7 @@ def plots(R, E, coupling_type, coupling_order):
                         ax[i,j].text(6e-16,5e23,r'$\delta t\, \gtrsim \, 1~{\rm day}~\uparrow$',rotation = 38, fontsize = 25, color = 'tab:purple',bbox=dict(facecolor='white', alpha = 1, edgecolor='tab:purple',boxstyle='round,pad=.1'))
                         if i == 1 and j==1:
                             ax[i,j].text(1e-11,1e7,r'$E_{\rm tot} = 10^{-2} M_{\odot}$'+'\n' +r'$R = 10~{\rm kpc}$'+ '\n'+r'$\,\eta_{\rm DM} = 10^{-19}/10^5$',bbox=dict(facecolor='tab:purple', alpha = 0.0,edgecolor = 'white',boxstyle='round,pad=.2'))
-
-                    #             ax[i,j].text(4e-20,2e29,r'$\omega_{\phi}\,t_{*} \lesssim \, 1$',color = 'tab:brown')
-                    #ax[i,j].text(E_from_uncert(ts[i][j])/2e2,3e29,r'$\omega_{\phi}\,t_{*} \lesssim \, 1$',color = 'tab:brown',bbox=dict(facecolor='white', alpha = 0.8, edgecolor='chocolate',boxstyle='round,pad=.1'))
-#                     ax[i,j].text(1e-19,3e29,r'$\omega\,t_{*} \lesssim \, 2\pi$',color = 'tab:brown',bbox=dict(facecolor='white', alpha = 0.8, edgecolor='chocolate',boxstyle='round,pad=.1'))
+                            
                 ax[0,j].set_title(r'$\log_{10}(m_{\phi}/{\rm eV}) = $'+str(int(np.log10(mass[0][j]))), pad = 20)
                 ax[i,1].set_ylabel(r'$t_*$ = '+str(int(ts[i][0]))+r' s',labelpad = 40,rotation = 270)
                 ax[i,1].yaxis.set_label_position("right")
@@ -504,8 +461,12 @@ def plots(R, E, coupling_type, coupling_order):
 if __name__ == "__main__":
     coupling_types = ['photon','electron','gluon']
     coupling_orders = ['linear','quad']
+    
+    # Extragalactic
     R_EG = 1e7
     E_EG = 1
+    
+    # Galactic
     R_GC = 1e4
     E_GC = 1e-2
     
