@@ -239,6 +239,65 @@ def plot_fill_region(ax, Elist, Microscope_m, t, m, R, eta, Etot, E_unc, dt, K_s
         d = d_from_delta_t(dt, R, m, Elist, 30e-6, K_space)
         ax.plot(Elist, d, color = colorlist[0],linewidth = 2,linestyle = '--'  )
 
+def annotate_plot(ax, i, j, m, dt, R, E_unc, coupling_type, filename):
+    """ Annotate plot regions """
+    
+    # Define lambda for bbox style
+    bbox_style = lambda color: dict(facecolor = 'white', alpha = 1, edgecolor = color, boxstyle = 'round,pad=.1')
+    
+    # Define time labels 
+    time_labels = [
+        {
+            "delta_t": dt, 
+            "color": "tab:red", 
+            "txt": r'$\delta t\, \gtrsim \, 1~{\rm yr}~ \uparrow $' # dt >~ 1 year
+            },
+        {
+            "delta_t": DAY_TO_SEC, 
+            "color": "tab:purple", 
+            "txt": r'$\delta t\, \gtrsim \, 1~{\rm day}~ \uparrow$' # dt >~ 1 day
+            }
+    ]
+    
+    # Label regions in parameter space for each time label
+    for label in time_labels:
+        omega_over_m = omegaoverm_noscreen(label["delta_t"], R)
+        pos_x = m*omega_over_m/4
+        pos_y = 1e-7
+        txt = label["txt"]
+        ax.text(pos_x, pos_y, txt, rotation = 90, fontsize = 25, color = label["color"], bbox = bbox_style(label["color"]))
+    
+    config = {
+        "10Mpc_": {
+            "pos": (E_unc/200, 1e-1),
+            "txt": r'$E_{\rm tot} = M_{\odot}$'+'\n' + r'$R = 10~{\rm Mpc}$'
+        },
+        "10kpc_": {
+            "pos": (1e-20, 1e-2),
+            "txt": r'$E_{\rm tot} = 10^{-2} M_{\odot}$'+'\n' + r'$R = 10~{\rm kpc}$'
+        }
+    }
+    
+    eta = {
+        "photon": r'$\,\eta_{\rm DM} = 10^{-19}/5900$',
+        "electron": r'$\,\eta_{\rm DM} = 10^{-17}$',
+        "gluon": r'$\,\eta_{\rm DM} = 10^{-19}/10^5$'
+    }
+    
+    for prefix, val in config.items():
+        if filename.startswith(prefix):
+            pos_x, pos_y = val["pos"]
+            txt = r'$\omega\,t_{*} \lesssim \, 2\pi$' # omega t_* <~ 2pi
+            ax.text(pos_x, pos_y, txt, color = 'tab:brown', bbox = bbox_style("chocolate"))
+            
+            # Add table of parameters for subplot (1, 1)
+            if (i, j) == (1, 1) and coupling_type in eta:
+                pos_x = 5e12 if coupling_type == "photon" else 2e-11
+                pos_y = 4e-9
+                txt = val["txt"] + '\n' + eta[coupling_type]
+                ax.text(pos_x, pos_y, txt, bbox = bbox_style("white"))
+        
+
 def plots(R, E, coupling_type, coupling_order):
     m_bench = 1e-21 #in eV
     m_bench2 = 1e-18
@@ -335,41 +394,7 @@ def plots(R, E, coupling_type, coupling_order):
                 
                 plot_fill_region(axij, Elist, Microscope_m, t, m, R, eta, Etot, E_unc, dt, K_space)
 
-                if filename == '10Mpc_'+coupling_type+'_linear_dilatoniccoupling.pdf':
-                    ax[i,j].text(mass[i][j]*omegaoverm_noscreen(dt,R)/4,1e-7,r'$\delta t\, \gtrsim \, 1~{\rm yr}~ \uparrow $',rotation = 90, fontsize = 25, color = 'tab:red',bbox=dict(facecolor='white', alpha = 1, edgecolor='tab:red',boxstyle='round,pad=.1'))
-                    ax[i,j].text(mass[i][j]*omegaoverm_noscreen(dt_1day,R)/4,1e-7,r'$\delta t\, \gtrsim \, 1~{\rm day}~ \uparrow$',rotation = 90, fontsize = 25, color = 'tab:purple',bbox=dict(facecolor='white', alpha = 1, edgecolor='tab:purple',boxstyle='round,pad=.1'))
-                    ax[i,j].text(E_from_uncert(ts[i][j])/2e2,1e-1,r'$\omega\,t_{*} \lesssim \, 2\pi$',color = 'tab:brown',bbox=dict(facecolor='white', alpha = 1, edgecolor='chocolate',boxstyle='round,pad=.1'))
-                    if coupling_type == 'photon':
-                        if i == 1:
-                            if j == 1:
-                                ax[i,j].text(5e-12,4e-9,r'$E_{\rm tot} = M_{\odot}$'+'\n' +r'$R = 10~{\rm Mpc}$'+ '\n'+r'$\,\eta_{\rm DM} = 10^{-19}/5900$',bbox=dict(facecolor='tab:purple', alpha = 0.0,edgecolor = 'white',boxstyle='round,pad=.2'))
-                    elif coupling_type == 'electron':
-                        if i == 1:
-                            if j == 1:
-                                ax[i,j].text(2e-11,4e-9,r'$E_{\rm tot} =  M_{\odot}$'+'\n' +r'$R = 10~{\rm Mpc}$'+ '\n'+r'$\,\eta_{\rm DM} = 10^{-17}$',bbox=dict(facecolor='tab:purple', alpha = 0.0,edgecolor = 'white',boxstyle='round,pad=.2'))
-                    elif coupling_type == 'gluon':
-                        if i == 1:
-                            if j == 1:
-                                ax[i,j].text(2e-11,4e-9,r'$E_{\rm tot} =  M_{\odot}$'+'\n' +r'$R = 10~{\rm Mpc}$'+ '\n'+r'$\,\eta_{\rm DM} = 10^{-19}/10^5$',bbox=dict(facecolor='tab:purple', alpha = 0.0,edgecolor = 'white',boxstyle='round,pad=.2'))
-
-                if filename == '10kpc_'+coupling_type+'_linear_dilatoniccoupling.pdf':
-                    ax[i,j].text(mass[i][j]*omegaoverm_noscreen(dt,R)/4,1e-7,r'$\delta t\, \gtrsim \, 1~{\rm yr}~ \uparrow $',rotation = 90, fontsize = 25, color = 'tab:red',bbox=dict(facecolor='white', alpha = 1, edgecolor='tab:red',boxstyle='round,pad=.1'))
-                    ax[i,j].text(mass[i][j]*omegaoverm_noscreen(dt_1day,R)/4,1e-7,r'$\delta t\, \gtrsim \, 1~{\rm day}~ \uparrow$',rotation = 90, fontsize = 25, color = 'tab:purple',bbox=dict(facecolor='white', alpha = 1, edgecolor='tab:purple',boxstyle='round,pad=.1'))
-                    if coupling_type == 'photon':
-                        if i == 1:
-                            if j == 1:
-                                ax[i,j].text(5e-12,4e-9,r'$E_{\rm tot} = 10^{-2} M_{\odot}$'+'\n' +r'$R = 10~{\rm kpc}$'+ '\n'+r'$\,\eta_{\rm DM} = 10^{-19}/5900$',bbox=dict(facecolor='tab:purple', alpha = 0.0,edgecolor = 'white',boxstyle='round,pad=.2'))
-
-                    elif coupling_type == 'electron':
-                        if i == 1:
-                            if j == 1:
-                                ax[i,j].text(2e-11,4e-9,r'$E_{\rm tot} = 10^{-2} M_{\odot}$'+'\n' +r'$R = 10~{\rm kpc}$'+ '\n'+r'$\,\eta_{\rm DM} = 10^{-17}$',bbox=dict(facecolor='tab:purple', alpha = 0.0,edgecolor = 'white',boxstyle='round,pad=.2'))
-
-                    elif coupling_type == 'gluon':
-                        if i == 1:
-                            if j == 1:
-                                ax[i,j].text(2e-11,4e-9,r'$E_{\rm tot} = 10^{-2} M_{\odot}$'+'\n' +r'$R = 10~{\rm kpc}$'+ '\n'+r'$\,\eta_{\rm DM} = 10^{-19}/10^5$',bbox=dict(facecolor='tab:purple', alpha = 0.0,edgecolor = 'white',boxstyle='round,pad=.2'))
-                    ax[i,j].text(1e-20,1e-2,r'$\omega\,t_{*} \lesssim \, 2\pi$',color = 'tab:brown',bbox=dict(facecolor='white', alpha = 1, edgecolor='chocolate',boxstyle='round,pad=.1'))
+                annotate_plot(axij, i, j, m, dt, R, E_unc, coupling_type, filename)
                     
                 ax[0,j].set_title(r'$\log_{10}(m_{\phi}/{\rm eV}) = $'+str(int(np.log10(mass[0][j]))), pad = 20)
                 ax[i,1].set_ylabel(r'$t_*$ = '+str(int(ts[i][0]))+r' s',labelpad = 40,rotation = 270)
