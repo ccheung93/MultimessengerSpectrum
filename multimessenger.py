@@ -20,6 +20,7 @@ usetex: True
 #  The uncertainty relationship is dw * ts >= 1. So, we can say that for a given wavepacket, dw * ts = aw where aw >= 1.
 # That means, if aw = 1, we're talking about a Gaussian, since a Gaussian has the minimum uncertainty.
 
+# eta - fractional frequency sensitivity
 
 # GLOBAL CONSTANTS
 INEV_TO_PC = 0.197e-18 * 1e9/3.086e13   # eV^-1 to parsecs
@@ -127,13 +128,13 @@ def exponentlabel(x, pos):
     return str("{:.0f}".format(np.log10(x)))
 
 def get_distance_label(R):
-    """ Returns distance label for a given value in parsecs 
+    """ Returns distance scale label for a given value in parsecs 
     
     Args:
         R (float): distance in parsecs
         
     Returns:
-        distance (str): a string label representing the distance in kpc or Mpc
+        distance (str): a string label representing the distance scale in kpc or Mpc
     """
     if R == 1e4:
         distance_label = '10kpc'
@@ -145,6 +146,19 @@ def get_distance_label(R):
     return distance_label
 
 def determineKparams(coupling_type, coupling_order):
+    """ determine K_parameters # TODO - add details
+
+    Args:
+        coupling_type (str): type of coupling (photon, electron, gluon)
+        coupling_order (str): order of coupling (linear or quadratic)
+
+    Returns:
+        K_space (float): 
+        K_E (float): 
+        K_atm (float): 
+        eta (float): fractional sensitivity of coupling_type to dark matter signal
+        ylabel (str): y-axis label
+    """
     if coupling_type == 'photon':
         K_space = 6.3e-4
         K_E = 1.9e-3
@@ -267,7 +281,8 @@ def annotate_plot(ax, i, j, m, dt, R, E_unc, coupling_type, filename):
         txt = label["txt"]
         ax.text(pos_x, pos_y, txt, rotation = 90, fontsize = 25, color = label["color"], bbox = bbox_style(label["color"]))
     
-    config = {
+    # Define plot configurations for relevant distance scales
+    distance_scale_config = {
         "10Mpc_": {
             "pos": (E_unc/200, 1e-1),
             "txt": r'$E_{\rm tot} = M_{\odot}$'+'\n' + r'$R = 10~{\rm Mpc}$'
@@ -278,33 +293,38 @@ def annotate_plot(ax, i, j, m, dt, R, E_unc, coupling_type, filename):
         }
     }
     
-    eta = {
+    # Define eta_DM (sensitivity to DM signal) values for different fields
+    eta_DM = {
         "photon": r'$\,\eta_{\rm DM} = 10^{-19}/5900$',
         "electron": r'$\,\eta_{\rm DM} = 10^{-17}$',
         "gluon": r'$\,\eta_{\rm DM} = 10^{-19}/10^5$'
     }
     
-    for prefix, val in config.items():
+    for prefix, val in distance_scale_config.items():
         if filename.startswith(prefix):
             pos_x, pos_y = val["pos"]
             txt = r'$\omega\,t_{*} \lesssim \, 2\pi$' # omega t_* <~ 2pi
             ax.text(pos_x, pos_y, txt, color = 'tab:brown', bbox = bbox_style("chocolate"))
             
             # Add table of parameters for subplot (1, 1)
-            if (i, j) == (1, 1) and coupling_type in eta:
+            if (i, j) == (1, 1) and coupling_type in eta_DM:
                 pos_x = 5e12 if coupling_type == "photon" else 2e-11
                 pos_y = 4e-9
-                txt = val["txt"] + '\n' + eta[coupling_type]
+                txt = val["txt"] + '\n' + eta_DM[coupling_type]
                 ax.text(pos_x, pos_y, txt, bbox = bbox_style("white"))
         
 
 def plots(R, E, coupling_type, coupling_order):
-    m_bench = 1e-21 #in eV
+    m_bench = 1e-21 # in eV
     m_bench2 = 1e-18
-    m_bench3 = 1e-15
-    ts_bench = 1
+    ts_bench = 1 # in s
     ts_bench2 = 1e2
 
+    mass = [[m_bench,m_bench2],
+            [m_bench,m_bench2]]
+    ts = [[ts_bench,ts_bench],
+          [ts_bench2,ts_bench2]]
+    
     distance_label = get_distance_label(R) # get distance label in kpc or Mpc
 
     wmp_contour = np.logspace(0,30,1000)
@@ -325,9 +345,6 @@ def plots(R, E, coupling_type, coupling_order):
     ax[0,0].set_xscale('log')
     
     formatter = FuncFormatter(exponentlabel) # customize tick labels on axes to be in log10
-
-    mass = [[m_bench,m_bench2],[m_bench,m_bench2]] #np.logspace(-33,-5,100)
-    ts = [[ts_bench,ts_bench],[ts_bench2,ts_bench2]]
 
     dt = 1 * 3.154e7 #year
     dt_100 = 100 * 3.154e7
@@ -403,27 +420,38 @@ def plots(R, E, coupling_type, coupling_order):
     if coupling_order == 'quad':    
         for i in range(2):
             for j in range(2):
+                t = ts[i][j]
+                m = mass[i][j]
+                E_unc = E_from_uncert(t)
                 axij = ax[i][j]
                 setup_axes(axij, formatter, coupling_order)
 
-                ax[i,j].fill_between(Elist, d_screenearth(Elist,mass[i][j],K_E), 1e100, color = 'tab:blue', alpha = .05)
-                ax[i,j].plot(Elist,d_screen(Elist,R_atm,rho_atm,mass[i][j],K_atm), color = 'tab:blue',linestyle = 'dashed')
-                ax[i,j].plot(Elist,d_screen(Elist,R_exp,rho_exp,mass[i][j],K_E), color = 'tab:blue',linestyle = 'dotted')
-                ax[i,j].plot(Elist,d_screenearth(Elist,mass[i][j],K_E),color = 'tab:blue',linewidth = 3)
-                print(i,j,mass[i][j],K_E,R_exp,rho_exp)
-                print(min(d_screenearth(Elist,mass[i][j],K_E)),min(d_screen(Elist,R_exp,rho_exp,mass[i][j],K_E)))
-                ax[i,j].plot(QuadSPC_x,QuadSPC_y, color='k',linewidth = 3)
-                ax[i,j].fill_between(QuadSPC_x,QuadSPC_y,1e100,color = 'k',alpha = 0.05)
-                colorlist = ["tab:red", "tab:orange",'tab:purple']
+                d_screen_earth = d_screenearth(Elist, m, K_E)
+                d_screen_atm = d_screen(Elist, R_atm, rho_atm, m, K_atm)
+                d_screen_exp = d_screen(Elist, R_exp, rho_exp, m, K_E)
+                axij.fill_between(Elist, d_screen_earth, 1e100, color = 'tab:blue', alpha = .05)
+                axij.plot(Elist, d_screen_atm, color = 'tab:blue', linestyle = 'dashed')
+                axij.plot(Elist, d_screen_exp, color = 'tab:blue', linestyle = 'dotted')
+                axij.plot(Elist, d_screen_earth, color = 'tab:blue', linewidth = 3)
+                
+                print(i,j,m,K_E,R_exp,rho_exp)
+                print(min(d_screenearth(Elist,m,K_E)),min(d_screen(Elist,R_exp,rho_exp,mass[i][j],K_E)))
+                axij.plot(QuadSPC_x, QuadSPC_y, color='k', linewidth = 3)
+                axij.fill_between(QuadSPC_x, QuadSPC_y, 1e100, color = 'k', alpha = 0.05)
+                
+                colorlist = ["tab:red", "tab:orange", 'tab:purple']
 
-                ax[i,j].plot([E_from_uncert(ts[i][j]),E_from_uncert(ts[i][j])],[1e50,1e-50],color = 'chocolate',linestyle = '--')
-                ax[i,j].fill_between([1e-50,E_from_uncert(ts[i][j])],[1e-50,1e-50],[1e50,1e50], color = 'chocolate',alpha = 0.1)
+                axij.plot([E_unc, E_unc], [1e50, 1e-50], color = 'chocolate', linestyle = '--')
+                axij.fill_between([1e-50, E_unc], [1e-50, 1e-50], [1e50, 1e50], color = 'chocolate', alpha = 0.1)
 
-                ax[i,j].plot(m_bench*wmp_contour,d_probe(Elist,signalduration(Etot,mass[i][j],Elist,ts[i][j],R,1)[0],eta,Etot,mass[i][j],ts[i][j],R,1),c = 'k',linewidth = 2,alpha = 1)
-                ax[i,j].plot([mass[i][j],mass[i][j]],[1e-10,1e50],c = 'k',linestyle = '--')
-                ax[i,j].fill_between([1e-30,mass[i][j]],1e-10,1e50,facecolor = 'none',hatch = "/",edgecolor = 'k',alpha = 0.3)
-                if mass[i][j]>1e-20:
-                    ax[i,j].text(mass[i][j]/2e2,1e12,r'$\omega<m_{\phi}$',color = 'k',bbox=dict(facecolor='whitesmoke', alpha = 1, edgecolor='k',boxstyle='round,pad=.1'))
+                rho = signalduration(Etot, m, Elist, t, R, 1)[0]
+                coupling = d_probe(Elist, rho, eta, Etot, m, t, R, 1)
+                axij.plot(m_bench*wmp_contour, coupling, c = 'k', linewidth = 2, alpha = 1)
+                axij.plot([m, m], [1e-10, 1e50], c = 'k', linestyle = '--')
+                axij.fill_between([1e-30, m], 1e-10, 1e50, facecolor = 'none', hatch = "/", edgecolor = 'k', alpha = 0.3)
+                
+                if m > 1e-20:
+                    axij.text(m/2e2, 1e12, r'$\omega<m_{\phi}$', color = 'k', bbox=dict(facecolor='whitesmoke', alpha = 1, edgecolor='k',boxstyle='round,pad=.1'))
 
                 if R < 1e5:
                     ax[i,j].plot(Elist, d_from_delta_t(dt_1day,R,mass[i][j],Elist,30e-6,K_space), color = colorlist[2],linewidth = 2,linestyle = '--'  )
