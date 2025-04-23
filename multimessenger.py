@@ -29,7 +29,7 @@ AVG_VEL_DM = 1e-3 # Average velocity of galactic Dark Matter
 YEAR_TO_SEC = 3.154e7 # number of seconds in 1 year
 SPEED_OF_LIGHT = 3e8 # speed of light in m/s
 GCM3_TO_EV4 = 4.247e18 # g/cm^3 to eV^4
-PLANCK_MASS_EV = 1.2e27 # Planck mass in eV
+PLANCK_MASS_EV = 1.2e28 # Planck mass in eV
 GPC_TO_PC = 1e9 # gigaparsec to parsecs
 PC_TO_METERS = 3.086e16 # parsecs to meters
 
@@ -164,7 +164,7 @@ def determineKparams(coupling_type, coupling_order):
     return K_space, K_E, K_atm, eta, ylabel
     
     
-def plots(R,Etot,coupling_type,coupling_order):
+def plots(R, E, coupling_type, coupling_order):
     m_bench = 1e-21 #in eV
     m_bench2 = 1e-18
     m_bench3 = 1e-15
