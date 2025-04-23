@@ -56,13 +56,13 @@ def signalduration(Etot, m, w, ts, R, aw):
     coherence = [((t_intDM[i]**(1/4))*min([t_intDM[i]**(1/4),tau_DM[i]**(1/4)]))/(min([t_int[i]**(1/4),delta_t[i]**(1/4)])*min([t_int[i]**(1/4),tau_s[i]**(1/4)])) for i in range(len(w))]
     return rho, coherence, rho/rhoDM, delta_t, tau_s  
     
-def d_probe(w,rho,eta,Etot,m, ts, R, aw): 
+def d_probe(w, rho, eta, Etot, m, ts, R, aw): 
     """ Calculate value of dilatonic coupling we can probe"""
     phi = np.sqrt(2*rho)/w
     d = ((PLANCK_MASS_EV**2)*eta/(4*np.pi*phi**2)) * signalduration(Etot,m , w, ts, R, aw)[1]
     return d
 
-def d1_probe(w,rho,eta):
+def d1_probe(w, rho, eta):
     phi = np.sqrt(rho)/(2*w)
     d = (PLANCK_MASS_EV)*eta/(2*np.sqrt(np.pi)*phi)
     return d
@@ -155,7 +155,7 @@ def determineKparams(coupling_type, coupling_order):
     return K_space, K_E, K_atm, eta, ylabel
     
     
-def plots(R,E,coupling_type,coupling_order):
+def plots(R,Etot,coupling_type,coupling_order):
     m_bench = 1e-21 #in eV
     m_bench2 = 1e-18
     m_bench3 = 1e-15
@@ -170,7 +170,6 @@ def plots(R,E,coupling_type,coupling_order):
 
     filename = distance+'_'+coupling_type+'_'+coupling_order+'_dilatoniccoupling.pdf'
 
-    
     fig, ax = plt.subplots(2,2,figsize = (30,21),sharex = True, sharey = True)
     plt.rcParams['mathtext.fontset'] = 'cm'
     plt.rcParams.update({'font.size': 35,'font.family':'STIXGeneral'})
@@ -182,7 +181,6 @@ def plots(R,E,coupling_type,coupling_order):
     ax[0,0].set_yscale('log')
     ax[0,0].set_xscale('log')
     
-
     formatter = FuncFormatter(exponentlabel) # customize tick labels on axes to be in log10
 
     mass = [[m_bench,m_bench2],[m_bench,m_bench2]] #np.logspace(-33,-5,100)
@@ -196,10 +194,6 @@ def plots(R,E,coupling_type,coupling_order):
     Lambda_earth_screen = [1e22 for i in range(len(Elist))] 
     d_earth_screen = [d_from_Lambda(1e22) for i in range(len(Elist))] 
 
-    QuadSPC_x = []
-    QuadSPC_y = []
-
-
     gcm3_to_eV4 = 4.2e18  # NOTE - this value differs from that of signalDuration
     rho_E = 5.5 * K_E * gcm3_to_eV4        
     R_atm = 1e4* 5.07e6
@@ -207,16 +201,11 @@ def plots(R,E,coupling_type,coupling_order):
     R_exp = 1e0* 5.07e6
     rho_exp = 5.5 * K_E * gcm3_to_eV4 
 
-    tsample = np.logspace(-2,5,1000)
-
-    Microscope_x = []
-    Microscope_y = []
-
-    EotWashEP_x = []
-    EotWashEP_y = []
-
-    FifthForce_x = []
-    FifthForce_y = []
+    # Initialize arrays
+    Microscope_x, Microscope_y = [], []
+    EotWashEP_x, EotWashEP_y = [], []
+    FifthForce_x, FifthForce_y = [], []
+    QuadSPC_x, QuadSPC_y = [], []
 
     with open('Linear Scalar Photon/MICROSCOPE.txt', 'r') as f:
         for line in f:
@@ -236,9 +225,6 @@ def plots(R,E,coupling_type,coupling_order):
     Microscope_m = [Microscope_y[0] for i in range(len(Elist))]
     FifthForce_m = [FifthForce_y[0] for i in range(len(Elist))]
 
-    QuadSPC_x = []
-    QuadSPC_y = []
-
     rho_op_ex = 6.3e-4
     gcm3_to_eV4 = 4.2e18
     rho_E = 5.5 * rho_op_ex * gcm3_to_eV4        
@@ -247,8 +233,6 @@ def plots(R,E,coupling_type,coupling_order):
     R_exp = 1e0* 5.07e6
     rho_exp = 5.5 * rho_op_ex * gcm3_to_eV4 
     rho_ISM = 1.64*1.67e-24 * gcm3_to_eV4
-
-    tsample = np.logspace(-2,5,1000)
 
     if coupling_order == 'linear':    
         for i in range(2):
