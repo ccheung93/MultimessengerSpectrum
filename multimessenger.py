@@ -24,7 +24,7 @@ usetex: True
 # GLOBAL CONSTANTS
 INEV_TO_PC = 0.197e-18 * 1e9/3.086e13   # eV^-1 to parsecs
 EV_TO_SOLAR = (1.67e-27/2e30)*1e-9      # 1 eV in solar masses
-SEC_TO_INEV = 1e-9/(6.528e-25)          # 1 second in eV^-1
+SEC_TO_INEV = 1e-9/6.528e-25          # 1 second in eV^-1
 AVG_VEL_DM = 1e-3 # Average velocity of galactic Dark Matter
 YEAR_TO_SEC = 3.154e7 # number of seconds in 1 year
 SPEED_OF_LIGHT = 3e8 # speed of light in m/s
@@ -108,7 +108,7 @@ def d_screen(E, R, rho, m, K):
     return d
 
 def E_from_uncert(ts):
-    return (2*PI/ts)*(1/(1e-9/(6.528e-25)))
+    return (2*PI/ts)/SEC_TO_INEV
 
 def exponentlabel(x, pos):
     return str("{:.0f}".format(np.log10(x)))
@@ -162,22 +162,56 @@ def determineKparams(coupling_type, coupling_order):
             
     return K_space, K_E, K_atm, eta, ylabel
 
-def setup_axes(ax, i, j, formatter, coupling_order):
+def setup_axes(ax, formatter, coupling_order):
     """ Set up axes for subplot (i, j) """
-    ax[i,j].xaxis.set_major_formatter(formatter)
-    ax[i,j].yaxis.set_major_formatter(formatter)
-    ax[i,j].set_xticks(np.logspace(-20,-6,7))
-    ax[i,j].set_xlim(.3e-20,0.9e-6)
+    ax.xaxis.set_major_formatter(formatter)
+    ax.yaxis.set_major_formatter(formatter)
+    ax.set_xticks(np.logspace(-20,-6,7))
+    ax.set_xlim(.3e-20,0.9e-6)
     if coupling_order == 'linear': 
-        ax[i,j].set_ylim(1e-9,0.9e0)
-    ax[i,j].tick_params(direction="in")
+        ax.set_ylim(1e-9,0.9e0)
+    ax.tick_params(direction="in")
     
-def plot_MICROSCOPE(ax, i, j, Elist, Microscope_m):
-    """ Plot MICROSCOPE limits"""
-    ax[i,j].plot(Elist, Microscope_m, color = 'gray', linewidth = 2)
-    ax[i,j].fill_between(Elist, Microscope_m, [1e50 for i in range(len(Elist))], color = 'gray', alpha = 0.1)
-    ax[i,j].text(3.5e-11, Microscope_m[0]*1.3, r'${\rm MICROSCOPE}$', color = 'k')
+def plot_MICROSCOPE(ax, Elist, Microscope_m):
+    """ Plot MICROSCOPE EP violation limits """
+    ax.plot(Elist, Microscope_m, color = 'gray', linewidth = 2)
+    ax.fill_between(Elist, Microscope_m, [1e50 for i in range(len(Elist))], color = 'gray', alpha = 0.1)
+    ax.text(3.5e-11, Microscope_m[0]*1.3, r'${\rm MICROSCOPE}$', color = 'k')
+
+def plot_FifthForce(ax, t, Elist, FifthForce_m):
+    """ Plot fifth-force limits """
+    E_unc = E_from_uncert(t)
     
+    ax.plot(Elist, FifthForce_m)
+    ax.plot([E_unc, E_unc], [1e50, 1e-50], color = 'chocolate', linestyle = '--')
+    ax.fill_between([1e-50, E_unc], [1e-50, 1e-50], [1e50, 1e50], color = 'chocolate', alpha = 0.1)
+
+def plot_coupling(ax, Elist, t, m, R, eta, Etot, m_bench, wmp_contour):
+    """ Plot coupling limits """
+    rho = signalduration(Etot, m, Elist, t, R, 1)[0]
+    coupling = d1_probe(Elist, rho, eta)
+    
+    ax.plot(m_bench*wmp_contour, coupling, c = 'k', linewidth = 2, alpha = 1)
+    ax.plot([m, m], [1e-50, 1e50], c = 'k',linestyle = '--')
+    ax.fill_between([1e-30, m], 1e-50, 1e50, facecolor = 'none', hatch = "/", edgecolor = 'k', alpha = 0.3)
+
+def plot_fill_region(ax, Elist, Microscope_m, t, m, R, eta, Etot, dt, K_space):
+    colorlist = ["tab:red", "tab:orange",'tab:purple']
+    dt_1day = 60*60*24 #1day in seconds
+    if R < 1e5:
+        fillregion_x = np.array([Elist[l] for l in range(len(Elist)) if all([Elist[l]>E_from_uncert(t), Elist[l]> m*omegaoverm_noscreen(dt_1day,R)])])
+        fillregion_y = [Microscope_m[l] for l in range(len(fillregion_x))]
+
+        ax.fill_between(fillregion_x,d1_probe(fillregion_x,signalduration(Etot,m,fillregion_x,t,R,1)[0],eta),fillregion_y,where= d1_probe(fillregion_x,signalduration(Etot,m,fillregion_x,t,R,1)[0],eta)< fillregion_y, color = 'tab:green',alpha = 0.3)
+        ax.plot(Elist, d_from_delta_t(dt_1day,R,m,Elist,30e-6,K_space), color = colorlist[2],linewidth = 2,linestyle = '--'  )
+        ax.plot(Elist, d_from_delta_t(dt,R,m,Elist,30e-6,K_space), color = colorlist[0],linewidth = 2,linestyle = '--'  )
+    else:
+        fillregion_x = np.array([Elist[l] for l in range(len(Elist)) if all([Elist[l]>E_from_uncert(t), Elist[l]> m*omegaoverm_noscreen(dt_1day,R)])])
+        fillregion_y = [Microscope_m[l] for l in range(len(fillregion_x))]
+        ax.fill_between(fillregion_x,d1_probe(fillregion_x,signalduration(Etot,m,fillregion_x,t,R,1)[0],eta),fillregion_y,where= d1_probe(fillregion_x,signalduration(Etot,m,fillregion_x,t,R,1)[0],eta)< fillregion_y, color = 'tab:green',alpha = 0.3)
+        ax.plot(Elist, d_from_delta_t(dt_1day,R,m,Elist,30e-6,K_space), color = colorlist[2],linewidth = 2,linestyle = '--'  )
+        ax.plot(Elist, d_from_delta_t(dt,R,m,Elist,30e-6,K_space), color = colorlist[0],linewidth = 2,linestyle = '--'  )
+
 def plots(R, E, coupling_type, coupling_order):
     m_bench = 1e-21 #in eV
     m_bench2 = 1e-18
@@ -217,12 +251,11 @@ def plots(R, E, coupling_type, coupling_order):
     Lambda_earth_screen = [1e22 for i in range(len(Elist))] 
     d_earth_screen = [d_from_Lambda(1e22) for i in range(len(Elist))] 
 
-    gcm3_to_eV4 = 4.2e18  # NOTE - this value differs from that of signalDuration
-    rho_E = 5.5 * K_E * gcm3_to_eV4        
+    rho_E = 5.5 * K_E * GCM3_TO_EV4        
     R_atm = 1e4* 5.07e6
-    rho_atm = 1e-3 * K_atm * gcm3_to_eV4 
+    rho_atm = 1e-3 * K_atm * GCM3_TO_EV4 
     R_exp = 1e0* 5.07e6
-    rho_exp = 5.5 * K_E * gcm3_to_eV4 
+    rho_exp = 5.5 * K_E * GCM3_TO_EV4 
 
     # Initialize arrays
     Microscope_x, Microscope_y = [], []
@@ -249,45 +282,29 @@ def plots(R, E, coupling_type, coupling_order):
     FifthForce_m = [FifthForce_y[0] for i in range(len(Elist))]
 
     rho_op_ex = 6.3e-4
-    gcm3_to_eV4 = 4.2e18
-    rho_E = 5.5 * rho_op_ex * gcm3_to_eV4        
+    rho_E = 5.5 * rho_op_ex * GCM3_TO_EV4        
     R_atm = 1e4* 5.07e6
-    rho_atm = 1e-3 * rho_op_ex * gcm3_to_eV4 
+    rho_atm = 1e-3 * rho_op_ex * GCM3_TO_EV4 
     R_exp = 1e0* 5.07e6
-    rho_exp = 5.5 * rho_op_ex * gcm3_to_eV4 
-    rho_ISM = 1.64*1.67e-24 * gcm3_to_eV4
+    rho_exp = 5.5 * rho_op_ex * GCM3_TO_EV4 
+    rho_ISM = 1.64*1.67e-24 * GCM3_TO_EV4
 
     if coupling_order == 'linear':    
         for i in range(2):
             for j in range(2):
-                setup_axes(ax, i, j, formatter, coupling_order)
-                plot_MICROSCOPE(ax, i, j, Elist, Microscope_m)
+                t = ts[i][j]
+                m = mass[i][j]
+                axij = ax[i][j]
+                setup_axes(axij, formatter, coupling_order)
+                plot_MICROSCOPE(axij, Elist, Microscope_m)
+                plot_FifthForce(axij, t, Elist, FifthForce_m)
+                plot_coupling(axij, Elist, t, m, R, eta, Etot, m_bench, wmp_contour)
                 
-                colorlist = ["tab:red", "tab:orange",'tab:purple']
-                ax[i,j].plot(Elist,FifthForce_m)
-                ax[i,j].plot([E_from_uncert(ts[i][j]),E_from_uncert(ts[i][j])],[1e50,1e-50],color = 'chocolate',linestyle = '--')
-                ax[i,j].fill_between([1e-50,E_from_uncert(ts[i][j])],[1e-50,1e-50],[1e50,1e50], color = 'chocolate',alpha = 0.1)
-
-                ax[i,j].plot(m_bench*wmp_contour,d1_probe(Elist,signalduration(Etot,mass[i][j],Elist,ts[i][j],R,1)[0],eta),c = 'k',linewidth = 2,alpha = 1)
-                ax[i,j].plot([mass[i][j],mass[i][j]],[1e-50,1e50],c = 'k',linestyle = '--')
-                ax[i,j].fill_between([1e-30,mass[i][j]],1e-50,1e50,facecolor = 'none',hatch = "/",edgecolor = 'k',alpha = 0.3)
+                # Label region in parameter space where omega < scalar field mass
+                if m > 1e-20:
+                    ax[i,j].text(m/200, 1e-7, r'$\omega<m_{\phi}$', color = 'k', bbox = dict(facecolor = 'whitesmoke', alpha = 1, edgecolor = 'k',boxstyle = 'round,pad=.1'))   
                 
-                if mass[i][j] > 1e-20:
-                    ax[i,j].text(mass[i][j]/2e2,1e-7,r'$\omega<m_{\phi}$',color = 'k',bbox=dict(facecolor='whitesmoke', alpha = 1, edgecolor='k',boxstyle='round,pad=.1'))
-
-                if R < 1e5:
-                    fillregion_x = np.array([Elist[l] for l in range(len(Elist)) if all([Elist[l]>E_from_uncert(ts[i][j]), Elist[l]> mass[i][j]*omegaoverm_noscreen(dt_1day,R)])])
-                    fillregion_y = [Microscope_m[l] for l in range(len(fillregion_x))]
-
-                    ax[i,j].fill_between(fillregion_x,d1_probe(fillregion_x,signalduration(Etot,mass[i][j],fillregion_x,ts[i][j],R,1)[0],eta),fillregion_y,where= d1_probe(fillregion_x,signalduration(Etot,mass[i][j],fillregion_x,ts[i][j],R,1)[0],eta)< fillregion_y, color = 'tab:green',alpha = 0.3)
-                    ax[i,j].plot(Elist, d_from_delta_t(dt_1day,R,mass[i][j],Elist,30e-6,K_space), color = colorlist[2],linewidth = 2,linestyle = '--'  )
-                    ax[i,j].plot(Elist, d_from_delta_t(dt,R,mass[i][j],Elist,30e-6,K_space), color = colorlist[0],linewidth = 2,linestyle = '--'  )
-                else:
-                    fillregion_x = np.array([Elist[l] for l in range(len(Elist)) if all([Elist[l]>E_from_uncert(ts[i][j]), Elist[l]> mass[i][j]*omegaoverm_noscreen(dt_1day,R)])])
-                    fillregion_y = [Microscope_m[l] for l in range(len(fillregion_x))]
-                    ax[i,j].fill_between(fillregion_x,d1_probe(fillregion_x,signalduration(Etot,mass[i][j],fillregion_x,ts[i][j],R,1)[0],eta),fillregion_y,where= d1_probe(fillregion_x,signalduration(Etot,mass[i][j],fillregion_x,ts[i][j],R,1)[0],eta)< fillregion_y, color = 'tab:green',alpha = 0.3)
-                    ax[i,j].plot(Elist, d_from_delta_t(dt_1day,R,mass[i][j],Elist,30e-6,K_space), color = colorlist[2],linewidth = 2,linestyle = '--'  )
-                    ax[i,j].plot(Elist, d_from_delta_t(dt,R,mass[i][j],Elist,30e-6,K_space), color = colorlist[0],linewidth = 2,linestyle = '--'  )
+                plot_fill_region(axij, Elist, Microscope_m, t, m, R, eta, Etot, dt, K_space)
 
                 if filename == '10Mpc_'+coupling_type+'_linear_dilatoniccoupling.pdf':
                     ax[i,j].text(mass[i][j]*omegaoverm_noscreen(dt,R)/4,1e-7,r'$\delta t\, \gtrsim \, 1~{\rm yr}~ \uparrow $',rotation = 90, fontsize = 25, color = 'tab:red',bbox=dict(facecolor='white', alpha = 1, edgecolor='tab:red',boxstyle='round,pad=.1'))
@@ -332,7 +349,8 @@ def plots(R, E, coupling_type, coupling_order):
     if coupling_order == 'quad':    
         for i in range(2):
             for j in range(2):
-                setup_axes(ax, i, j, formatter, coupling_order)
+                axij = ax[i][j]
+                setup_axes(axij, formatter, coupling_order)
 
                 ax[i,j].fill_between(Elist, d_screenearth(Elist,mass[i][j],K_E), 1e100, color = 'tab:blue', alpha = .05)
                 ax[i,j].plot(Elist,d_screen(Elist,R_atm,rho_atm,mass[i][j],K_atm), color = 'tab:blue',linestyle = 'dashed')
