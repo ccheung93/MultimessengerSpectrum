@@ -21,17 +21,18 @@ usetex: True
 # That means, if aw = 1, we're talking about a Gaussian, since a Gaussian has the minimum uncertainty.
 
 
-# GLOBAL VARIABLES
+# GLOBAL CONSTANTS
 INEV_TO_PC = 0.197e-18 * 1e9/3.086e13   # eV^-1 to parsecs
 EV_TO_SOLAR = (1.67e-27/2e30)*1e-9      # 1 eV in solar masses
 SEC_TO_INEV = 1e-9/(6.528e-25)          # 1 second in eV^-1
 AVG_VEL_DM = 1e-3 # Average velocity of galactic Dark Matter
 YEAR_TO_SEC = 3.154e7 # number of seconds in 1 year
 SPEED_OF_LIGHT = 3e8 # speed of light in m/s
-GCM3_TO_EV4 = 4.247e18 # g/cm^3 to eV^4
+GCM3_TO_EV4 = 4.2e18 # g/cm^3 to eV^4
 PLANCK_MASS_EV = 1.2e28 # Planck mass in eV
 GPC_TO_PC = 1e9 # gigaparsec to parsecs
 PC_TO_METERS = 3.086e16 # parsecs to meters
+PI = np.pi 
 
 
 def signalduration(Etot, m, w, ts, R, aw): 
@@ -39,7 +40,7 @@ def signalduration(Etot, m, w, ts, R, aw):
     dt = 1 * 3.154e7                        # Integration time of 1 year = 3.154e7 seconds. This can be changed depending on the experiment. 
     """ NOTE - dt - should this be a parameter in the future? """
     
-    rm2 = 1/(4*np.pi*(R/INEV_TO_PC)**2)     # The inverse square law: 1/(4piR^2) with a conversion factor. 
+    rm2 = 1/(4*PI*(R/INEV_TO_PC)**2)     # The inverse square law: 1/(4piR^2) with a conversion factor. 
     dw = aw /(ts* SEC_TO_INEV)              # Spread in energies defined by ts and aw: Comes from uncertainty principle
     dx_burst = ts* SEC_TO_INEV              # Physical size of the phi wave at the source. Assume traveling at c = 1.
     dx_spread = (dw/w)*(m**2 / (w**2))*(R/INEV_TO_PC)
@@ -51,24 +52,24 @@ def signalduration(Etot, m, w, ts, R, aw):
     delta_t = np.sqrt(delta_t_burst**2 + ((dw/w)*(m**2 / (w**2))*(R/INEV_TO_PC))**2)#((dw/w) * (R/INEV_TO_PC)/(q**2 * np.sqrt(q**2 + 1)))/(SEC_TO_INEV)
     t_intDM = [1e6*SEC_TO_INEV for i in range(len(w))] 
     t_int = [(1/365)*YEAR_TO_SEC*SEC_TO_INEV for i in range(len(w))] #year
-    tau_s = 2*np.pi/dw +(2*np.pi*(R/INEV_TO_PC)/(q**3 * m * delta_t_burst)) ###Convert the parsec conversion to AU conversion.
-    tau_DM = (2*np.pi/(w * AVG_VEL_DM**2))
+    tau_s = 2*PI/dw +(2*PI*(R/INEV_TO_PC)/(q**3 * m * delta_t_burst)) ###Convert the parsec conversion to AU conversion.
+    tau_DM = (2*PI/(w * AVG_VEL_DM**2))
     coherence = [((t_intDM[i]**(1/4))*min([t_intDM[i]**(1/4),tau_DM[i]**(1/4)]))/(min([t_int[i]**(1/4),delta_t[i]**(1/4)])*min([t_int[i]**(1/4),tau_s[i]**(1/4)])) for i in range(len(w))]
     return rho, coherence, rho/rhoDM, delta_t, tau_s  
     
 def d_probe(w, rho, eta, Etot, m, ts, R, aw): 
     """ Calculate value of dilatonic coupling we can probe"""
     phi = np.sqrt(2*rho)/w
-    d = ((PLANCK_MASS_EV**2)*eta/(4*np.pi*phi**2)) * signalduration(Etot,m , w, ts, R, aw)[1]
+    d = ((PLANCK_MASS_EV**2)*eta/(4*PI*phi**2)) * signalduration(Etot,m , w, ts, R, aw)[1]
     return d
 
 def d1_probe(w, rho, eta):
     phi = np.sqrt(rho)/(2*w)
-    d = (PLANCK_MASS_EV)*eta/(2*np.sqrt(np.pi)*phi)
+    d = (PLANCK_MASS_EV)*eta/(2*np.sqrt(PI)*phi)
     return d
 
 def d_from_Lambda(Lambda): #For supernova constraint
-    d = (1/(4*np.pi))*(PLANCK_MASS_EV/Lambda)**2
+    d = (1/(4*PI))*(PLANCK_MASS_EV/Lambda)**2
     return d
 
 def d_from_delta_t(dt,L,m,E,Dg,K):
@@ -80,10 +81,9 @@ def d_from_delta_t(dt,L,m,E,Dg,K):
     ng = 0.006e9 * (L**3)/(GPC_TO_PC**3)#1e6 #galaxies/Gpc^3
     
     k1 = np.array([((2*E[i]**2*(dt*SPEED_OF_LIGHT))/(L*PC_TO_METERS)) - m**2 for i in range(len(E))])
-    k2 = PLANCK_MASS_EV**2/(2*4*np.pi)
+    k2 = PLANCK_MASS_EV**2/(2*4*PI)
     if L < 1e5:
-#         rho_ISM = 37*rho_ISM
-        d = np.array([(((E[i]**2)*(1 - (1/((dt*SPEED_OF_LIGHT)/(L*PC_TO_METERS) + 1)**2)) - m**2)/(8*np.pi*rho_ISM))*(PLANCK_MASS_EV**2) for i in range(len(E))])
+        d = np.array([(((E[i]**2)*(1 - (1/((dt*SPEED_OF_LIGHT)/(L*PC_TO_METERS) + 1)**2)) - m**2)/(8*PI*rho_ISM))*(PLANCK_MASS_EV**2) for i in range(len(E))])
     else:
         k1 = np.array([((2*E[i]**2*(dt*SPEED_OF_LIGHT))/(L*PC_TO_METERS)) - m**2 for i in range(len(E))])
         k3 = 1/((ng**(1/3) + 1)*Dg*rho_ISM + (1-(ng**(1/3)+1)*Dg)*rho_IGM)
@@ -97,24 +97,23 @@ def omegaoverm_noscreen(dt, L):
 
 def d_screenearth(E, m, K): #Probably don't need this or the next for the ALP, but left it here just in case.
     rho_op_ex = 1e-3
-    gcm3_to_eV4 = 4.2e18 # NOTE - this value is slightly different than GCM3_TO_EV4 from signalDuration()
-    rho_E = 5.5 * rho_op_ex * gcm3_to_eV4
+    rho_E = 5.5 * rho_op_ex * GCM3_TO_EV4
     R = 6.371e6 * 5.07e6
-    d = [((PLANCK_MASS_EV**2)/(2*4*np.pi*rho_E*K))*((1/(2*R)**2) + E[i]**2-m**2) for i in range(len(E))]
+    d = [((PLANCK_MASS_EV**2)/(2*4*PI*rho_E*K))*((1/(2*R)**2) + E[i]**2-m**2) for i in range(len(E))]
     return d
 
 
 def d_screen(E, R, rho, m, K):
-    d = [((PLANCK_MASS_EV**2)/(2*4*np.pi*rho*K))*((1/R**2) + E[i]**2-m**2) for i in range(len(E))]
+    d = [((PLANCK_MASS_EV**2)/(2*4*PI*rho*K))*((1/R**2) + E[i]**2-m**2) for i in range(len(E))]
     return d
 
 def E_from_uncert(ts):
-    return (2*np.pi/ts)*(1/(1e-9/(6.528e-25)))
+    return (2*PI/ts)*(1/(1e-9/(6.528e-25)))
 
 def exponentlabel(x, pos):
     return str("{:.0f}".format(np.log10(x)))
 
-def getDistanceLabel(R):
+def get_distance_label(R):
     """ Returns distance label for a given value in parsecs 
     
     Args:
@@ -173,6 +172,12 @@ def setup_axes(ax, i, j, formatter, coupling_order):
         ax[i,j].set_ylim(1e-9,0.9e0)
     ax[i,j].tick_params(direction="in")
     
+def plot_MICROSCOPE(ax, i, j, Elist, Microscope_m):
+    """ Plot MICROSCOPE limits"""
+    ax[i,j].plot(Elist, Microscope_m, color = 'gray', linewidth = 2)
+    ax[i,j].fill_between(Elist, Microscope_m, [1e50 for i in range(len(Elist))], color = 'gray', alpha = 0.1)
+    ax[i,j].text(3.5e-11, Microscope_m[0]*1.3, r'${\rm MICROSCOPE}$', color = 'k')
+    
 def plots(R, E, coupling_type, coupling_order):
     m_bench = 1e-21 #in eV
     m_bench2 = 1e-18
@@ -180,7 +185,7 @@ def plots(R, E, coupling_type, coupling_order):
     ts_bench = 1
     ts_bench2 = 1e2
 
-    distance_label = getDistanceLabel(R) # get distance label in kpc or Mpc
+    distance_label = get_distance_label(R) # get distance label in kpc or Mpc
 
     wmp_contour = np.logspace(0,30,1000)
 
@@ -256,19 +261,17 @@ def plots(R, E, coupling_type, coupling_order):
         for i in range(2):
             for j in range(2):
                 setup_axes(ax, i, j, formatter, coupling_order)
-
-                ax[i,j].plot(Elist,Microscope_m,color = 'gray',linewidth = 2)
-                ax[i,j].fill_between(Elist,Microscope_m,[1e50 for i in range(len(Elist))],color = 'gray',alpha = 0.1)
-                ax[i,j].text(3.5e-11,Microscope_m[0]*1.3,r'${\rm MICROSCOPE}$',color = 'k')
-                ax[i,j].plot(Elist,FifthForce_m)
+                plot_MICROSCOPE(ax, i, j, Elist, Microscope_m)
+                
                 colorlist = ["tab:red", "tab:orange",'tab:purple']
-
+                ax[i,j].plot(Elist,FifthForce_m)
                 ax[i,j].plot([E_from_uncert(ts[i][j]),E_from_uncert(ts[i][j])],[1e50,1e-50],color = 'chocolate',linestyle = '--')
                 ax[i,j].fill_between([1e-50,E_from_uncert(ts[i][j])],[1e-50,1e-50],[1e50,1e50], color = 'chocolate',alpha = 0.1)
 
                 ax[i,j].plot(m_bench*wmp_contour,d1_probe(Elist,signalduration(Etot,mass[i][j],Elist,ts[i][j],R,1)[0],eta),c = 'k',linewidth = 2,alpha = 1)
                 ax[i,j].plot([mass[i][j],mass[i][j]],[1e-50,1e50],c = 'k',linestyle = '--')
                 ax[i,j].fill_between([1e-30,mass[i][j]],1e-50,1e50,facecolor = 'none',hatch = "/",edgecolor = 'k',alpha = 0.3)
+                
                 if mass[i][j] > 1e-20:
                     ax[i,j].text(mass[i][j]/2e2,1e-7,r'$\omega<m_{\phi}$',color = 'k',bbox=dict(facecolor='whitesmoke', alpha = 1, edgecolor='k',boxstyle='round,pad=.1'))
 
@@ -335,6 +338,7 @@ def plots(R, E, coupling_type, coupling_order):
                 ax[i,j].plot(Elist,d_screen(Elist,R_atm,rho_atm,mass[i][j],K_atm), color = 'tab:blue',linestyle = 'dashed')
                 ax[i,j].plot(Elist,d_screen(Elist,R_exp,rho_exp,mass[i][j],K_E), color = 'tab:blue',linestyle = 'dotted')
                 ax[i,j].plot(Elist,d_screenearth(Elist,mass[i][j],K_E),color = 'tab:blue',linewidth = 3)
+                print(i,j,mass[i][j],K_E,R_exp,rho_exp)
                 print(min(d_screenearth(Elist,mass[i][j],K_E)),min(d_screen(Elist,R_exp,rho_exp,mass[i][j],K_E)))
                 ax[i,j].plot(QuadSPC_x,QuadSPC_y, color='k',linewidth = 3)
                 ax[i,j].fill_between(QuadSPC_x,QuadSPC_y,1e100,color = 'k',alpha = 0.05)
@@ -342,7 +346,6 @@ def plots(R, E, coupling_type, coupling_order):
 
                 ax[i,j].plot([E_from_uncert(ts[i][j]),E_from_uncert(ts[i][j])],[1e50,1e-50],color = 'chocolate',linestyle = '--')
                 ax[i,j].fill_between([1e-50,E_from_uncert(ts[i][j])],[1e-50,1e-50],[1e50,1e50], color = 'chocolate',alpha = 0.1)
-
 
                 ax[i,j].plot(m_bench*wmp_contour,d_probe(Elist,signalduration(Etot,mass[i][j],Elist,ts[i][j],R,1)[0],eta,Etot,mass[i][j],ts[i][j],R,1),c = 'k',linewidth = 2,alpha = 1)
                 ax[i,j].plot([mass[i][j],mass[i][j]],[1e-10,1e50],c = 'k',linestyle = '--')
