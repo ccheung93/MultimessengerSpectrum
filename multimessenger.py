@@ -114,14 +114,23 @@ def E_from_uncert(ts):
 def exponentlabel(x, pos):
     return str("{:.0f}".format(np.log10(x)))
 
-def determineDistance(R):
-    """ Returns distance in parsecs """
-    if R == 1e4:
-        distance = '10kpc'
-    elif R == 1e7:
-        distance = '10Mpc'
+def getDistanceLabel(R):
+    """ Returns distance label for a given value in parsecs 
     
-    return distance
+    Args:
+        R (float): distance in parsecs
+        
+    Returns:
+        distance (str): a string label representing the distance in kpc or Mpc
+    """
+    if R == 1e4:
+        distance_label = '10kpc'
+    elif R == 1e7:
+        distance_label = '10Mpc'
+    else:
+        raise ValueError(f"Unsupported distance value: {R}")
+    
+    return distance_label
 
 def determineKparams(coupling_type, coupling_order):
     if coupling_type == 'photon':
@@ -162,13 +171,13 @@ def plots(R,Etot,coupling_type,coupling_order):
     ts_bench = 1
     ts_bench2 = 1e2
 
-    distance = determineDistance(R)
+    distance_label = getDistanceLabel(R) # get distance label in kpc or Mpc
 
     wmp_contour = np.logspace(0,30,1000)
 
     K_space, K_E, K_atm, eta, ylabel = determineKparams(coupling_type, coupling_order)
 
-    filename = distance+'_'+coupling_type+'_'+coupling_order+'_dilatoniccoupling.pdf'
+    filename = distance_label+'_'+coupling_type+'_'+coupling_order+'_dilatoniccoupling.pdf'
 
     fig, ax = plt.subplots(2,2,figsize = (30,21),sharex = True, sharey = True)
     plt.rcParams['mathtext.fontset'] = 'cm'
