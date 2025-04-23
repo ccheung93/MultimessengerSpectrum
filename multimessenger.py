@@ -27,6 +27,7 @@ EV_TO_SOLAR = (1.67e-27/2e30)*1e-9      # 1 eV in solar masses
 SEC_TO_INEV = 1e-9/6.528e-25          # 1 second in eV^-1
 AVG_VEL_DM = 1e-3 # Average velocity of galactic Dark Matter
 YEAR_TO_SEC = 3.154e7 # number of seconds in 1 year
+DAY_TO_SEC = 60*60*24 # number of seconds in 1 day
 SPEED_OF_LIGHT = 3e8 # speed of light in m/s
 GCM3_TO_EV4 = 4.2e18 # g/cm^3 to eV^4
 PLANCK_MASS_EV = 1.2e28 # Planck mass in eV
@@ -91,6 +92,18 @@ def d_from_delta_t(dt,L,m,E,Dg,K):
     return d
 
 def omegaoverm_noscreen(dt, L):
+    """ Returns omega/m without screening (beta(x) = 0)
+        omega           L+dt
+        ----- = ---------------------
+          m     sqrt(2*L*dt + dt**2)
+          
+    Args:
+        dt (float): time delay 
+        L (float): distance between source and detection
+    
+    Returns:
+        omega_over_m (float): frequency to mass ratio
+    """
     L = L*PC_TO_METERS
     dt = dt*SPEED_OF_LIGHT
     return (L+dt)/(np.sqrt(dt * (2*L+dt)))
@@ -178,10 +191,8 @@ def plot_MICROSCOPE(ax, Elist, Microscope_m):
     ax.fill_between(Elist, Microscope_m, [1e50 for i in range(len(Elist))], color = 'gray', alpha = 0.1)
     ax.text(3.5e-11, Microscope_m[0]*1.3, r'${\rm MICROSCOPE}$', color = 'k')
 
-def plot_FifthForce(ax, t, Elist, FifthForce_m):
+def plot_FifthForce(ax, t, Elist, E_unc, FifthForce_m):
     """ Plot fifth-force limits """
-    E_unc = E_from_uncert(t)
-    
     ax.plot(Elist, FifthForce_m)
     ax.plot([E_unc, E_unc], [1e50, 1e-50], color = 'chocolate', linestyle = '--')
     ax.fill_between([1e-50, E_unc], [1e-50, 1e-50], [1e50, 1e50], color = 'chocolate', alpha = 0.1)
@@ -195,22 +206,38 @@ def plot_coupling(ax, Elist, t, m, R, eta, Etot, m_bench, wmp_contour):
     ax.plot([m, m], [1e-50, 1e50], c = 'k',linestyle = '--')
     ax.fill_between([1e-30, m], 1e-50, 1e50, facecolor = 'none', hatch = "/", edgecolor = 'k', alpha = 0.3)
 
-def plot_fill_region(ax, Elist, Microscope_m, t, m, R, eta, Etot, dt, K_space):
+def plot_fill_region(ax, Elist, Microscope_m, t, m, R, eta, Etot, E_unc, dt, K_space):
     colorlist = ["tab:red", "tab:orange",'tab:purple']
-    dt_1day = 60*60*24 #1day in seconds
+    
+    # NOTE - this is the same code for both R < 1e5 and R >= 1e5
     if R < 1e5:
-        fillregion_x = np.array([Elist[l] for l in range(len(Elist)) if all([Elist[l]>E_from_uncert(t), Elist[l]> m*omegaoverm_noscreen(dt_1day,R)])])
+        omega_over_m = omegaoverm_noscreen(DAY_TO_SEC, R)
+        fillregion_x = np.array([Elist[l] for l in range(len(Elist)) if all([Elist[l] > E_unc, Elist[l] > m*omega_over_m])])
         fillregion_y = [Microscope_m[l] for l in range(len(fillregion_x))]
 
-        ax.fill_between(fillregion_x,d1_probe(fillregion_x,signalduration(Etot,m,fillregion_x,t,R,1)[0],eta),fillregion_y,where= d1_probe(fillregion_x,signalduration(Etot,m,fillregion_x,t,R,1)[0],eta)< fillregion_y, color = 'tab:green',alpha = 0.3)
-        ax.plot(Elist, d_from_delta_t(dt_1day,R,m,Elist,30e-6,K_space), color = colorlist[2],linewidth = 2,linestyle = '--'  )
-        ax.plot(Elist, d_from_delta_t(dt,R,m,Elist,30e-6,K_space), color = colorlist[0],linewidth = 2,linestyle = '--'  )
+        rho = signalduration(Etot, m, fillregion_x, t, R, 1)[0]
+        coupling = d1_probe(fillregion_x, rho, eta)
+        ax.fill_between(fillregion_x, coupling, fillregion_y, where = d1_probe(fillregion_x, rho, eta) < fillregion_y, color = 'tab:green',alpha = 0.3)
+        
+        d = d_from_delta_t(DAY_TO_SEC, R, m, Elist, 30e-6, K_space)
+        ax.plot(Elist, d, color = colorlist[2],linewidth = 2,linestyle = '--'  )
+        
+        d = d_from_delta_t(dt, R, m, Elist, 30e-6, K_space)
+        ax.plot(Elist, d, color = colorlist[0],linewidth = 2,linestyle = '--'  )
     else:
-        fillregion_x = np.array([Elist[l] for l in range(len(Elist)) if all([Elist[l]>E_from_uncert(t), Elist[l]> m*omegaoverm_noscreen(dt_1day,R)])])
+        omega_over_m = omegaoverm_noscreen(DAY_TO_SEC, R)
+        fillregion_x = np.array([Elist[l] for l in range(len(Elist)) if all([Elist[l] > E_unc, Elist[l] > m*omega_over_m])])
         fillregion_y = [Microscope_m[l] for l in range(len(fillregion_x))]
-        ax.fill_between(fillregion_x,d1_probe(fillregion_x,signalduration(Etot,m,fillregion_x,t,R,1)[0],eta),fillregion_y,where= d1_probe(fillregion_x,signalduration(Etot,m,fillregion_x,t,R,1)[0],eta)< fillregion_y, color = 'tab:green',alpha = 0.3)
-        ax.plot(Elist, d_from_delta_t(dt_1day,R,m,Elist,30e-6,K_space), color = colorlist[2],linewidth = 2,linestyle = '--'  )
-        ax.plot(Elist, d_from_delta_t(dt,R,m,Elist,30e-6,K_space), color = colorlist[0],linewidth = 2,linestyle = '--'  )
+        
+        rho = signalduration(Etot, m, fillregion_x, t, R, 1)[0]
+        coupling = d1_probe(fillregion_x, rho, eta)
+        ax.fill_between(fillregion_x, coupling, fillregion_y, where = d1_probe(fillregion_x, rho, eta) < fillregion_y, color = 'tab:green',alpha = 0.3)
+        
+        d = d_from_delta_t(DAY_TO_SEC, R, m, Elist, 30e-6, K_space)
+        ax.plot(Elist, d, color = colorlist[2],linewidth = 2,linestyle = '--'  )
+        
+        d = d_from_delta_t(dt, R, m, Elist, 30e-6, K_space)
+        ax.plot(Elist, d, color = colorlist[0],linewidth = 2,linestyle = '--'  )
 
 def plots(R, E, coupling_type, coupling_order):
     m_bench = 1e-21 #in eV
@@ -294,17 +321,19 @@ def plots(R, E, coupling_type, coupling_order):
             for j in range(2):
                 t = ts[i][j]
                 m = mass[i][j]
+                E_unc = E_from_uncert(t)
                 axij = ax[i][j]
+
                 setup_axes(axij, formatter, coupling_order)
                 plot_MICROSCOPE(axij, Elist, Microscope_m)
-                plot_FifthForce(axij, t, Elist, FifthForce_m)
+                plot_FifthForce(axij, t, Elist, E_unc, FifthForce_m)
                 plot_coupling(axij, Elist, t, m, R, eta, Etot, m_bench, wmp_contour)
                 
                 # Label region in parameter space where omega < scalar field mass
                 if m > 1e-20:
                     ax[i,j].text(m/200, 1e-7, r'$\omega<m_{\phi}$', color = 'k', bbox = dict(facecolor = 'whitesmoke', alpha = 1, edgecolor = 'k',boxstyle = 'round,pad=.1'))   
                 
-                plot_fill_region(axij, Elist, Microscope_m, t, m, R, eta, Etot, dt, K_space)
+                plot_fill_region(axij, Elist, Microscope_m, t, m, R, eta, Etot, E_unc, dt, K_space)
 
                 if filename == '10Mpc_'+coupling_type+'_linear_dilatoniccoupling.pdf':
                     ax[i,j].text(mass[i][j]*omegaoverm_noscreen(dt,R)/4,1e-7,r'$\delta t\, \gtrsim \, 1~{\rm yr}~ \uparrow $',rotation = 90, fontsize = 25, color = 'tab:red',bbox=dict(facecolor='white', alpha = 1, edgecolor='tab:red',boxstyle='round,pad=.1'))
