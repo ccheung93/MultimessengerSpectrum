@@ -347,7 +347,7 @@ def plot_time_labels(ax, m, dt, R, coupling_order):
         txt = label["txt"]
         ax.text(pos_x, pos_y, txt, rotation = 90, fontsize = 25, color = label["color"], bbox = bbox_style(label["color"]))
     
-def annotate_plot(ax, i, j, m, dt, R, E_unc, coupling_type, filename):
+def annotate_plot(ax, i, j, E_unc, coupling_type, filename):
     """ Annotate plot regions """
     # Define lambda for bbox style
     bbox_style = lambda color: dict(facecolor = 'white', alpha = 1, edgecolor = color, boxstyle = 'round,pad=.1')
@@ -379,7 +379,7 @@ def annotate_plot(ax, i, j, m, dt, R, E_unc, coupling_type, filename):
             
             # Add table of parameters for subplot (1, 1)
             if (i, j) == (1, 1) and coupling_type in eta_DM:
-                pos_x = 5e12 if coupling_type == "photon" else 2e-11
+                pos_x = 5e-12 if coupling_type == "photon" else 2e-11
                 pos_y = 4e-9
                 txt = val["txt"] + '\n' + eta_DM[coupling_type]
                 ax.text(pos_x, pos_y, txt, bbox = bbox_style("white"))
@@ -452,6 +452,125 @@ def plot_supernova(ax, Elist, coupling_type):
         ax.text(lbl_x, config["lbl_y"], config["txt"], fontsize = 30, color = 'black')
         ax.plot(Elist, config["line"], color = 'gray', linewidth = 3)
         ax.fill_between(Elist, config["line"], 1e100, color = 'gray', alpha = 0.1)
+
+def plot_parameter_list(ax, i, j, coupling_type, filename):
+    bbox_style = dict(facecolor='tab:purple', 
+                      alpha = 0.0, 
+                      edgecolor = 'white', 
+                      boxstyle='round,pad=.2')
+    
+    parameter_list_positions = {
+        "photon": {
+            "10Mpc_": (1e-11, 1e7),
+            "10kpc_": (1e-11, 1e8)
+        },
+        "electron": {
+            "10Mpc_": (1e-10, 1e10),
+            "10kpc_": (1e-11, 1e10)
+        },
+        "gluon": {
+            "10Mpc_": (1e-11, 1e5),
+            "10kpc_": (1e-11, 1e7)
+        }
+    }
+    
+    parameter_list = {
+        "photon": {
+            "10Mpc_": r'$E_{\rm tot} = M_{\odot}$'+ '\n' + r'$R = 10~{\rm Mpc}$'+ '\n' + r'$\,\eta_{\rm DM} = 10^{-19}/5900$',
+            "10kpc_": r'$E_{\rm tot} = 10^{-2} M_{\odot}$' + '\n' + r'$R = 10~{\rm kpc}$' + '\n' + r'$\,\eta_{\rm DM} = 10^{-19}/5900$'
+        },
+        "electron": {
+            "10Mpc_": r'$E_{\rm tot} = M_{\odot}$' + '\n' + r'$R = 10~{\rm Mpc}$'+ '\n' + r'$\,\eta_{\rm DM} = 10^{-17}$',
+            "10kpc_": r'$E_{\rm tot} = 10^{-2} M_{\odot}$' + '\n' + r'$R = 10~{\rm kpc}$' + '\n' + r'$\,\eta_{\rm DM} = 10^{-17}$'
+        },
+        "gluon": {
+            "10Mpc_": r'$E_{\rm tot} = M_{\odot}$'+'\n' +r'$R = 10~{\rm Mpc}$'+ '\n'+r'$\,\eta_{\rm DM} = 10^{-19}/10^5$',
+            "10kpc_": r'$E_{\rm tot} = 10^{-2} M_{\odot}$' + '\n' + r'$R = 10~{\rm kpc}$' + '\n' + r'$\,\eta_{\rm DM} = 10^{-19}/10^5$'
+        }
+    }
+    
+    distance_scales = ["10Mpc_", "10kpc_"]
+
+    for prefix in distance_scales:
+        if filename.startswith(prefix) and (i, j) == (1, 1):
+            pos = parameter_list_positions[coupling_type][prefix]
+            txt = parameter_list[coupling_type][prefix]
+            ax.text(*pos, txt, bbox = bbox_style)
+    
+
+def plot_critical_screening(ax, K_E, K_atm, coupling_type, filename):
+    """ Plot critical screening lines """
+    distance_scales = ["10Mpc_", "10kpc_"]
+    
+    crit_screening_labels = {
+        "photon": {
+            "eth": r'$d_{e,{\rm crit}}^{(2)\, \rm\oplus}$',
+            "atm": r'$d_{e,{\rm crit}}^{(2)\, \rm atm}$',
+            "exp": r'$d_{e,{\rm crit}}^{(2)\, \rm app}$' # NOTE - Called this exp instead of app (more obvious to me)
+        },
+        "electron": {
+            "eth": r'$d_{m_e,{\rm crit}}^{(2)\, \rm\oplus}$',
+            "atm": r'$d_{m_e,{\rm crit}}^{(2)\, \rm atm}$',
+            "exp": r'$d_{m_e,{\rm crit}}^{(2)\, \rm app}$'
+        },
+        "gluon": {
+            "eth": r'$d_{g,{\rm crit}}^{(2)\, \rm\oplus}$',
+            "atm": r'$d_{g,{\rm crit}}^{(2)\, \rm atm}$',
+            "exp": r'$d_{g,{\rm crit}}^{(2)\, \rm app}$'
+        }
+    }
+    
+    
+    
+    crit_screening_positions = {
+        "photon": {
+            "10Mpc_": {
+                "eth": (3e-13, 2e12/K_E),
+                "atm": (1e-12, 5e21/K_atm),
+                "exp": (5e-11, 7e25/K_E)
+            },
+            "10kpc_": {
+                "eth": (7e-15, 2e13/K_E),
+                "atm": (2e-12, 1e19/K_atm),
+                "exp": (5e-11, 7e25/K_E)
+            }
+        },
+        
+        "electron": {
+            "10Mpc_": {
+                "eth": (2e-13, 2e11/K_E),
+                "atm": (2e-12, 1e19/K_atm),
+                "exp": (1e-10, 7e25/K_E)
+            },
+            "10kpc_": {
+                "eth": (5e-15, 2e9/K_E),
+                "atm": (2e-13, 5e21/K_atm),
+                "exp": (5e-11, 7e25/K_E)
+            }
+        },
+        
+        "gluon": {
+            "10Mpc_": {
+                "eth": (2e-13, 2e11/K_E),
+                "atm": (2e-12, 1e19/K_atm),
+                "exp": (5e-12, 7e25/K_E)
+            },
+            "10kpc_": {
+                "eth": (2e-14, 2e9/K_E),
+                "atm": (2e-12, 1e19/K_atm),
+                "exp": (5e-11, 7e25/K_E)
+            }
+        }
+    }
+    
+    for prefix in distance_scales:
+        if filename.startswith(prefix):
+            pos = crit_screening_positions[coupling_type][prefix]
+            lbl = crit_screening_labels[coupling_type]
+            ax.text(*pos["eth"], lbl["eth"], fontsize =35, color = 'tab:blue')
+            ax.text(*pos["atm"], lbl["atm"], fontsize =35, color = 'tab:blue')
+            ax.text(*pos["exp"], lbl["exp"], fontsize =35, color = 'tab:blue')
+
 
 def plots(R, Etot, coupling_type, coupling_order):
     m_bench = 1e-21 # in eV
@@ -545,7 +664,7 @@ def plots(R, Etot, coupling_type, coupling_order):
                 plot_fill_region(axij, Elist, Microscope_m, t, m, R, eta, Etot, E_unc)
                 plot_d_from_delta_t(axij, Elist, m, R, dt, 30e-6, K_space)
                 plot_time_labels(axij, m, dt, R, coupling_order)
-                annotate_plot(axij, i, j, m, dt, R, E_unc, coupling_type, filename)
+                annotate_plot(axij, i, j, E_unc, coupling_type, filename)
                     
                 ax[0,j].set_title(r'$\log_{10}(m_{\phi}/{\rm eV}) = $'+str(int(np.log10(mass[0][j]))), pad = 20)
                 ax[i,1].set_ylabel(r'$t_*$ = '+str(int(ts[i][0]))+r' s',labelpad = 40,rotation = 270)
@@ -567,69 +686,31 @@ def plots(R, Etot, coupling_type, coupling_order):
                 plot_d_from_delta_t(axij, Elist, m, R, dt, 30e-6, K_space)
                 plot_fill_region_quad(axij, Elist, t, m, R, eta, dt, Etot, E_unc, R_exp, rho_exp, K_E, K_space)
                 plot_supernova(axij, Elist, coupling_type)
+                plot_critical_screening(axij, K_E, K_atm, coupling_type, filename)
 
+                plot_parameter_list(axij, i, j, coupling_type, filename)
                 if filename == '10Mpc_'+coupling_type+'_quad_dilatoniccoupling.pdf':
                     plot_time_labels(axij, m, dt, R, coupling_order)
-                    
-                    if coupling_type == 'photon':
-                        ax[i,j].text(3e-13,2e12/K_E,r'$d_{e,{\rm crit}}^{(2)\, \rm\oplus}$', fontsize =35, color = 'tab:blue')
-                        ax[i,j].text(1e-12,5e21/K_atm,r'$d_{e,{\rm crit}}^{(2)\, \rm atm}$', fontsize =35, color = 'tab:blue')
-                        ax[i,j].text(5e-11,7e25/K_E,r'$d_{e,{\rm crit}}^{(2)\, \rm app}$', fontsize =35, color = 'tab:blue')
-                        if i == 1 and j ==1:
-                            ax[i,j].text(1e-11,1e7,r'$E_{\rm tot} = M_{\odot}$'+'\n' +r'$R = 10~{\rm Mpc}$'+ '\n'+r'$\,\eta_{\rm DM} = 10^{-19}/5900$',bbox=dict(facecolor='tab:purple', alpha = 0.0,edgecolor = 'white',boxstyle='round,pad=.2'))
-
-                    elif coupling_type == 'electron':
-                        ax[i,j].text(2e-13,2e11/K_E,r'$d_{m_e,{\rm crit}}^{(2)\, \rm\oplus}$', fontsize =35, color = 'tab:blue')
-                        ax[i,j].text(2e-12,1e19/K_atm,r'$d_{m_e,{\rm crit}}^{(2)\, \rm atm}$', fontsize =35, color = 'tab:blue')
-                        ax[i,j].text(1e-10,7e25/K_E,r'$d_{m_e,{\rm crit}}^{(2)\, \rm app}$', fontsize =35, color = 'tab:blue')
-                        if i == 1 and j==1:
-                            ax[i,j].text(1e-10,1e10,r'$E_{\rm tot} = M_{\odot}$'+'\n' +r'$R = 10~{\rm Mpc}$'+ '\n'+r'$\,\eta_{\rm DM} = 10^{-17}$',bbox=dict(facecolor='tab:purple', alpha = 0.0,edgecolor = 'white',boxstyle='round,pad=.2'))
-
-                    elif coupling_type == 'gluon':
-                        ax[i,j].text(2e-13,2e11/K_E,r'$d_{g,{\rm crit}}^{(2)\, \rm\oplus}$', fontsize =35, color = 'tab:blue')
-                        ax[i,j].text(2e-12,1e19/K_atm,r'$d_{g,{\rm crit}}^{(2)\, \rm atm}$', fontsize =35, color = 'tab:blue')
-                        ax[i,j].text(5e-12,7e25/K_E,r'$d_{g,{\rm crit}}^{(2)\, \rm app}$', fontsize =35, color = 'tab:blue')
-                        if i == 1 and j==1:
-                            ax[i,j].text(1e-11,1e5,r'$E_{\rm tot} = M_{\odot}$'+'\n' +r'$R = 10~{\rm Mpc}$'+ '\n'+r'$\,\eta_{\rm DM} = 10^{-19}/10^5$',bbox=dict(facecolor='tab:purple', alpha = 0.0,edgecolor = 'white',boxstyle='round,pad=.2'))
 
                 if filename == '10kpc_'+coupling_type+'_quad_dilatoniccoupling.pdf':
                     if coupling_type == 'photon':
-                        ax[i,j].text(7e-15,2e13/K_E,r'$d_{e,{\rm crit}}^{(2)\, \rm\oplus}$', fontsize =35, color = 'tab:blue')
-                        ax[i,j].text(2e-12,1e19/K_atm,r'$d_{e,{\rm crit}}^{(2)\, \rm atm}$', fontsize =35, color = 'tab:blue')
-                        ax[i,j].text(5e-11,7e25/K_E,r'$d_{e,{\rm crit}}^{(2)\, \rm app}$', fontsize =35, color = 'tab:blue')
-                        
                         # These time labels are hard-coded
                         ax[i,j].text(3e-17,1e27,r'$\delta t\, \gtrsim \, 1~{\rm yr}~\uparrow$',rotation = 37, fontsize = 25, color = 'tab:red',bbox=dict(facecolor='white', alpha = 1, edgecolor='tab:red',boxstyle='round,pad=.1'))
                         ax[i,j].text(6e-16,9e26,r'$\delta t\, \gtrsim \, 1~{\rm day}~\uparrow$',rotation = 37, fontsize = 25, color = 'tab:purple',bbox=dict(facecolor='white', alpha = 1, edgecolor='tab:purple',boxstyle='round,pad=.1'))
                         
-                        if i == 1 and j==1:
-                            ax[i,j].text(1e-11,1e8,r'$E_{\rm tot} = 10^{-2} M_{\odot}$'+'\n' +r'$R = 10~{\rm kpc}$'+ '\n'+r'$\,\eta_{\rm DM} = 10^{-19}/5900$',bbox=dict(facecolor='tab:purple', alpha = 0.0,edgecolor = 'white',boxstyle='round,pad=.2'))
 
                     elif coupling_type == 'electron':
-                        ax[i,j].text(5e-15,2e9/K_E,r'$d_{m_e,{\rm crit}}^{(2)\,\rm\oplus}$', fontsize =35, color = 'tab:blue')
-                        ax[i,j].text(2e-13,5e21/K_atm,r'$d_{m_e,{\rm crit}}^{(2)\, \rm atm}$', fontsize =35, color = 'tab:blue')
-                        ax[i,j].text(5e-11,7e25/K_E,r'$d_{m_e,{\rm crit}}^{(2)\,\rm app}$', fontsize =35, color = 'tab:blue')
-                        
                         # These time labels are hard-coded
                         ax[i,j].text(3e-17,8.5e26,r'$\delta t\, \gtrsim \, 1~{\rm yr}~\uparrow$',rotation = 39, fontsize = 25, color = 'tab:red',bbox=dict(facecolor='white', alpha = 1, edgecolor='tab:red',boxstyle='round,pad=.1'))
                         ax[i,j].text(6e-16,8e26,r'$\delta t\, \gtrsim \, 1~{\rm day}~\uparrow$',rotation = 39, fontsize = 25, color = 'tab:purple',bbox=dict(facecolor='white', alpha = 1, edgecolor='tab:purple',boxstyle='round,pad=.1'))
                         
-                        if i == 1 and j==1:
-                            ax[i,j].text(1e-11,1e10,r'$E_{\rm tot} = 10^{-2} M_{\odot}$'+'\n' +r'$R = 10~{\rm kpc}$'+ '\n'+r'$\,\eta_{\rm DM} = 10^{-17}$',bbox=dict(facecolor='tab:purple', alpha = 0.0,edgecolor = 'white',boxstyle='round,pad=.2'))
-
                     elif coupling_type == 'gluon':
                         ax[i,j].set_ylim(.5e5,8e30)
-                        ax[i,j].text(2e-14,2e9/K_E,r'$d_{g,{\rm crit}}^{(2)\, \rm\oplus}$', fontsize =35, color = 'tab:blue')
-                        ax[i,j].text(2e-12,1e19/K_atm,r'$d_{g,{\rm crit}}^{(2)\, \rm atm}$', fontsize =35, color = 'tab:blue')
-                        ax[i,j].text(5e-11,7e25/K_E,r'$d_{g,{\rm crit}}^{(2)\, \rm app}$', fontsize =35, color = 'tab:blue')
                         
                         # These time labels are hard-coded
                         ax[i,j].text(3e-17,6e23,r'$\delta t\, \gtrsim \, 1~{\rm yr}~\uparrow$',rotation = 38, fontsize = 25, color = 'tab:red',bbox=dict(facecolor='white', alpha = 1, edgecolor='tab:red',boxstyle='round,pad=.1'))
                         ax[i,j].text(6e-16,5e23,r'$\delta t\, \gtrsim \, 1~{\rm day}~\uparrow$',rotation = 38, fontsize = 25, color = 'tab:purple',bbox=dict(facecolor='white', alpha = 1, edgecolor='tab:purple',boxstyle='round,pad=.1'))
                         
-                        if i == 1 and j==1:
-                            ax[i,j].text(1e-11,1e7,r'$E_{\rm tot} = 10^{-2} M_{\odot}$'+'\n' +r'$R = 10~{\rm kpc}$'+ '\n'+r'$\,\eta_{\rm DM} = 10^{-19}/10^5$',bbox=dict(facecolor='tab:purple', alpha = 0.0,edgecolor = 'white',boxstyle='round,pad=.2'))
-                            
                 ax[0,j].set_title(r'$\log_{10}(m_{\phi}/{\rm eV}) = $'+str(int(np.log10(mass[0][j]))), pad = 20)
                 ax[i,1].set_ylabel(r'$t_*$ = '+str(int(ts[i][0]))+r' s',labelpad = 40,rotation = 270)
                 ax[i,1].yaxis.set_label_position("right")
