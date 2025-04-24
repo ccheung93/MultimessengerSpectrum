@@ -8,20 +8,6 @@ from matplotlib.ticker import FuncFormatter
 
 usetex: True
 
-
-# The duration of the signal and other quantities, such as the density of the phis at the Earth: 
-# This depends on:
-#1. Total energy emitted Etot,
-#2. Mass of the phi field m,
-#3. Phi energy w, 
-#4. Intrinsic burst duration ts, 
-#5. the distance R
-#6. a parameter I have called aw: This parameterizes whether we have the minimum uncertainty relation or not. 
-#  The uncertainty relationship is dw * ts >= 1. So, we can say that for a given wavepacket, dw * ts = aw where aw >= 1.
-# That means, if aw = 1, we're talking about a Gaussian, since a Gaussian has the minimum uncertainty.
-
-# eta - fractional frequency sensitivity
-
 # GLOBAL CONSTANTS
 INEV_TO_PC = 0.197e-18 * 1e9/3.086e13   # eV^-1 to parsecs
 EV_TO_SOLAR = (1.67e-27/2e30)*1e-9      # 1 eV in solar masses
@@ -37,47 +23,108 @@ PC_TO_METERS = 3.086e16 # parsecs to meters
 PI = np.pi 
 
 
-def signalduration(Etot, m, w, ts, R, aw): 
-    """ Calculate the duration of the signal """ 
-    dt = 1 * 3.154e7                        # Integration time of 1 year = 3.154e7 seconds. This can be changed depending on the experiment. 
-    """ NOTE - dt - should this be a parameter in the future? """
+def signal_duration(Etot, mass, energies, burst_duration, distance_pc, aw, integration_time=1): 
+    """ Calculate the duration of the signal 
     
-    rm2 = 1/(4*PI*(R/INEV_TO_PC)**2)     # The inverse square law: 1/(4piR^2) with a conversion factor. 
-    dw = aw /(ts* SEC_TO_INEV)              # Spread in energies defined by ts and aw: Comes from uncertainty principle
-    dx_burst = ts* SEC_TO_INEV              # Physical size of the phi wave at the source. Assume traveling at c = 1.
-    dx_spread = (dw/w)*(m**2 / (w**2))*(R/INEV_TO_PC)
-    dx = dx_burst+dx_spread
+    Args:
+        Etot (float): total energy of emitted phi particles from the source [eV]
+        mass (float): mass of phi field [eV]
+        energies (array_like): array of individual particle energies [eV]
+        burst_duration (float): t_star, the duration of the burst emission at the source [s]
+        distance_pc (float): distance between source and detector [parsecs]
+        aw (float): wavepacket uncertainty parameter based on uncertainty principle:
+                    dw * t_star >= 1, where dw = spread in energies and t_star = burst_duration
+                    for a given wavepacket, aw = dw * t_star, where aw >= 1
+                    aw = 1 corresponds to a Gaussian wavepacket, since it has minimum uncertainty
+        integration_time (float): integration time [days], default = 1 day
+
+    Returns:
+        rho (float) - energy density of phi at Earth [eV^4]
+        coherence (list of float) - coherence time values for each energy [unitless]
+    """ 
+    # Convert integration time to seconds and then to inverse eV
+    integration_time_s = integration_time * DAY_TO_SEC
+    t_int = np.full_like(energies, integration_time_s * SEC_TO_INEV)
+    
+    # Set integration time for dark matter experiment
+    integration_time_DM_s = 1e6
+    t_int_DM = np.full_like(energies, integration_time_DM_s * SEC_TO_INEV)
+    
+    # Inverse-square law (1/4*pi*R^2) with a unit conversion
+    rm2 = 1/(4*PI*(distance_pc/INEV_TO_PC)**2)
+    
+    # Spread in energies from uncertainty principle: dw * t_star = aw -> dw = aw / t_star
+    dw = aw/(burst_duration*SEC_TO_INEV)
+    
+    # Physical size of the phi wave at the source, assuming it's traveling at c = 1.
+    dx_burst = burst_duration*SEC_TO_INEV 
+    
+    # Spread of the phi wave during propagation
+    dx_spread = (dw/energies)*(mass**2/energies**2)*(distance_pc/INEV_TO_PC)
+    
+    # Total spread of the wavepacket
+    dx = dx_burst + dx_spread
+    
+    # Energy density of phi at Earth
     rho = (Etot/EV_TO_SOLAR)*rm2/dx
-    rhoDM = 3.05e-6 #eV^4
-    q = w/m
-    delta_t_burst = ts*SEC_TO_INEV
-    delta_t = np.sqrt(delta_t_burst**2 + ((dw/w)*(m**2 / (w**2))*(R/INEV_TO_PC))**2)#((dw/w) * (R/INEV_TO_PC)/(q**2 * np.sqrt(q**2 + 1)))/(SEC_TO_INEV)
-    t_intDM = [1e6*SEC_TO_INEV for i in range(len(w))] 
-    t_int = [(1/365)*YEAR_TO_SEC*SEC_TO_INEV for i in range(len(w))] #year
-    tau_s = 2*PI/dw +(2*PI*(R/INEV_TO_PC)/(q**3 * m * delta_t_burst)) ###Convert the parsec conversion to AU conversion.
-    tau_DM = (2*PI/(w * AVG_VEL_DM**2))
-    coherence = [((t_intDM[i]**(1/4))*min([t_intDM[i]**(1/4),tau_DM[i]**(1/4)]))/(min([t_int[i]**(1/4),delta_t[i]**(1/4)])*min([t_int[i]**(1/4),tau_s[i]**(1/4)])) for i in range(len(w))]
-    return rho, coherence, rho/rhoDM, delta_t, tau_s  
+
+    # Calculate t_star_tilde, the signal duration at Earth
+    burst_duration = burst_duration*SEC_TO_INEV
+    signal_duration = np.sqrt(burst_duration**2 + dx_spread**2)
     
-def d_probe(w, rho, eta, Etot, m, ts, R, aw): 
-    """ Calculate value of dilatonic coupling we can probe"""
-    phi = np.sqrt(2*rho)/w
-    d = ((PLANCK_MASS_EV**2)*eta/(4*PI*phi**2)) * signalduration(Etot,m , w, ts, R, aw)[1]
+    # Calculate coherence times
+    # tau_star = 2*pi/dw + (2*pi*R)/(q^3*m*t_star)
+    # tau_DM = 2*pi/mv^2 ! NOTE - should m be energies or mass (m_phi)?
+    q = energies/mass
+    distance_inev = distance_pc/INEV_TO_PC
+    tau_star = 2*PI/dw + 2*PI*distance_inev/(q**3 * mass * burst_duration)
+    tau_DM = 2*PI/(energies*AVG_VEL_DM**2)
+    
+    # Compute rescaling factor (fraction in Eq. 46 in arXiv:2502.08716v1)
+    rescaling_factor = [
+        (t_int_DM[i]**(1/4)) * min(tau_DM[i]**(1/4), t_int_DM[i]**(1/4))/
+        (min(signal_duration[i]**(1/4), t_int[i]**(1/4)) * min(tau_star[i]**(1/4), t_int[i]**(1/4))) 
+        for i in range(len(energies))]
+    
+    return rho, rescaling_factor
+
+def d1_probe(w, rho, coherence, eta):
+    """ Calculate value of linear dilatonic coupling we can probe
+
+    Args:
+        w (float): energy of phi emitted by the source
+        rho (float): density of phi at the Earth
+        coherence (array of floats): coherence times
+        eta (float): fractional sensitivity of coupling_type to dark matter signal
+
+    Returns:
+        float: value of linear dilatonic coupling we can probe
+    """
+    phi = np.sqrt(rho)/(2*w)
+    d = eta*PLANCK_MASS_EV/(2*np.sqrt(PI)*phi) * coherence
     return d
 
-def d1_probe(w, rho, eta):
-    phi = np.sqrt(rho)/(2*w)
-    d = (PLANCK_MASS_EV)*eta/(2*np.sqrt(PI)*phi)
+def d2_probe(w, rho, coherence, eta): 
+    """ Calculate value of quadratic dilatonic coupling we can probe
+    
+    Args:
+        w (float): energy of phi emitted by the source
+        rho (float): density of phi at the Earth
+        coherence (array of floats): coherence times
+        eta (float): fractional sensitivity of coupling_type to dark matter signal
+        
+    Returns:
+        float: value of quadratic dilatonic coupling we can probe
+    """
+    phi = np.sqrt(2*rho)/w
+    d = eta*PLANCK_MASS_EV**2/(4*PI*phi**2) * coherence
     return d
 
 def d_from_Lambda(Lambda): #For supernova constraint
     d = (1/(4*PI))*(PLANCK_MASS_EV/Lambda)**2
     return d
 
-def d_from_delta_t(dt,L,m,E,Dg,K):
-#     rho_op_ex = 6.3e-4
-#     rho_ISM = 6.2e-23 * K * gcm3_to_eV4 #density in g/cm^3 times the expectation value of the operator in normal matter times conversion to eV^4
-#     rho_IGM = 3e-31 * K * gcm3_to_eV4   
+def d_from_delta_t(dt, L, m, E, Dg, K):
     rho_ISM = 1.67e-24 * K * GCM3_TO_EV4 #density in g/cm^3 times the expectation value of the operator in normal matter times conversion to eV^4
     rho_IGM = 1.67e-30 * K * GCM3_TO_EV4   
     ng = 0.006e9 * (L**3)/(GPC_TO_PC**3)#1e6 #galaxies/Gpc^3
@@ -121,8 +168,8 @@ def d_screen(E, R, rho, m, K):
     d = [((PLANCK_MASS_EV**2)/(2*4*PI*rho*K))*((1/R**2) + E[i]**2-m**2) for i in range(len(E))]
     return d
 
-def E_from_uncert(ts):
-    return (2*PI/ts)/SEC_TO_INEV
+def E_from_uncert(t_star):
+    return (2*PI/t_star)/SEC_TO_INEV
 
 def exponentlabel(x, pos):
     return str("{:.0f}".format(np.log10(x)))
@@ -145,7 +192,7 @@ def get_distance_label(R):
     
     return distance_label
 
-def determineKparams(coupling_type, coupling_order):
+def set_K_params(coupling_type, coupling_order):
     """ determine K_parameters # TODO - add details
 
     Args:
@@ -153,9 +200,9 @@ def determineKparams(coupling_type, coupling_order):
         coupling_order (str): order of coupling (linear or quadratic)
 
     Returns:
-        K_space (float): 
-        K_E (float): 
-        K_atm (float): 
+        K_space (float): fraction of energy density of the ISM that is from coupling_type
+        K_E (float): fraction of energy density of the Earth that is from coupling_type
+        K_atm (float): fraction of energy density of the atmosphere that is from coupling_type
         eta (float): fractional sensitivity of coupling_type to dark matter signal
         ylabel (str): y-axis label
     """
@@ -175,7 +222,7 @@ def determineKparams(coupling_type, coupling_order):
         eta = 1e-17
         if coupling_order == 'linear':
             ylabel = r'$\log_{10}(d^{(1)}_{m_e})$'
-        if coupling_order == 'quad':    
+        if coupling_order == 'quad':
             ylabel = r'$\log_{10}(d^{(2)}_{m_e})$'
     elif coupling_type == 'gluon':
         K_space = 1.0
@@ -213,8 +260,8 @@ def plot_FifthForce(ax, t, Elist, E_unc, FifthForce_m):
 
 def plot_coupling(ax, Elist, t, m, R, eta, Etot, m_bench, wmp_contour):
     """ Plot coupling limits """
-    rho = signalduration(Etot, m, Elist, t, R, 1)[0]
-    coupling = d1_probe(Elist, rho, eta)
+    rho, coherence = signal_duration(Etot, m, Elist, t, R, 1)
+    coupling = d1_probe(Elist, rho, coherence, eta)
     
     ax.plot(m_bench*wmp_contour, coupling, c = 'k', linewidth = 2, alpha = 1)
     ax.plot([m, m], [1e-50, 1e50], c = 'k',linestyle = '--')
@@ -223,35 +270,19 @@ def plot_coupling(ax, Elist, t, m, R, eta, Etot, m_bench, wmp_contour):
 def plot_fill_region(ax, Elist, Microscope_m, t, m, R, eta, Etot, E_unc, dt, K_space):
     colorlist = ["tab:red", "tab:orange",'tab:purple']
     
-    # NOTE - this is the same code for both R < 1e5 and R >= 1e5
-    if R < 1e5:
-        omega_over_m = omegaoverm_noscreen(DAY_TO_SEC, R)
-        fillregion_x = np.array([Elist[l] for l in range(len(Elist)) if all([Elist[l] > E_unc, Elist[l] > m*omega_over_m])])
-        fillregion_y = [Microscope_m[l] for l in range(len(fillregion_x))]
-
-        rho = signalduration(Etot, m, fillregion_x, t, R, 1)[0]
-        coupling = d1_probe(fillregion_x, rho, eta)
-        ax.fill_between(fillregion_x, coupling, fillregion_y, where = d1_probe(fillregion_x, rho, eta) < fillregion_y, color = 'tab:green',alpha = 0.3)
-        
-        d = d_from_delta_t(DAY_TO_SEC, R, m, Elist, 30e-6, K_space)
-        ax.plot(Elist, d, color = colorlist[2],linewidth = 2,linestyle = '--'  )
-        
-        d = d_from_delta_t(dt, R, m, Elist, 30e-6, K_space)
-        ax.plot(Elist, d, color = colorlist[0],linewidth = 2,linestyle = '--'  )
-    else:
-        omega_over_m = omegaoverm_noscreen(DAY_TO_SEC, R)
-        fillregion_x = np.array([Elist[l] for l in range(len(Elist)) if all([Elist[l] > E_unc, Elist[l] > m*omega_over_m])])
-        fillregion_y = [Microscope_m[l] for l in range(len(fillregion_x))]
-        
-        rho = signalduration(Etot, m, fillregion_x, t, R, 1)[0]
-        coupling = d1_probe(fillregion_x, rho, eta)
-        ax.fill_between(fillregion_x, coupling, fillregion_y, where = d1_probe(fillregion_x, rho, eta) < fillregion_y, color = 'tab:green',alpha = 0.3)
-        
-        d = d_from_delta_t(DAY_TO_SEC, R, m, Elist, 30e-6, K_space)
-        ax.plot(Elist, d, color = colorlist[2],linewidth = 2,linestyle = '--'  )
-        
-        d = d_from_delta_t(dt, R, m, Elist, 30e-6, K_space)
-        ax.plot(Elist, d, color = colorlist[0],linewidth = 2,linestyle = '--'  )
+    omega_over_m = omegaoverm_noscreen(DAY_TO_SEC, R)
+    fillregion_x = np.array([Elist[l] for l in range(len(Elist)) if all([Elist[l] > E_unc, Elist[l] > m*omega_over_m])])
+    fillregion_y = [Microscope_m[l] for l in range(len(fillregion_x))]
+    
+    rho, coherence = signal_duration(Etot, m, fillregion_x, t, R, 1)
+    coupling = d1_probe(fillregion_x, rho, coherence, eta)
+    ax.fill_between(fillregion_x, coupling, fillregion_y, where = coupling < fillregion_y, color = 'tab:green',alpha = 0.3)
+    
+    d = d_from_delta_t(DAY_TO_SEC, R, m, Elist, 30e-6, K_space)
+    ax.plot(Elist, d, color = colorlist[2],linewidth = 2,linestyle = '--'  )
+    
+    d = d_from_delta_t(dt, R, m, Elist, 30e-6, K_space)
+    ax.plot(Elist, d, color = colorlist[0],linewidth = 2,linestyle = '--'  )
 
 def annotate_plot(ax, i, j, m, dt, R, E_unc, coupling_type, filename):
     """ Annotate plot regions """
@@ -322,7 +353,7 @@ def plot_couplings_screened(ax, Elist, m, K_E, K_atm, R_atm, rho_atm, R_exp, rho
     ax.plot(Elist, d_screen_exp, color = 'tab:blue', linestyle = 'dotted')
     ax.plot(Elist, d_screen_earth, color = 'tab:blue', linewidth = 3)
 
-def plots(R, E, coupling_type, coupling_order):
+def plots(R, Etot, coupling_type, coupling_order):
     m_bench = 1e-21 # in eV
     m_bench2 = 1e-18
     ts_bench = 1 # in s
@@ -337,7 +368,7 @@ def plots(R, E, coupling_type, coupling_order):
 
     wmp_contour = np.logspace(0,30,1000)
 
-    K_space, K_E, K_atm, eta, ylabel = determineKparams(coupling_type, coupling_order)
+    K_space, K_E, K_atm, eta, ylabel = set_K_params(coupling_type, coupling_order)
 
     filename = distance_label+'_'+coupling_type+'_'+coupling_order+'_dilatoniccoupling.pdf'
 
@@ -445,8 +476,8 @@ def plots(R, E, coupling_type, coupling_order):
                 axij.plot([E_unc, E_unc], [1e50, 1e-50], color = 'chocolate', linestyle = '--')
                 axij.fill_between([1e-50, E_unc], [1e-50, 1e-50], [1e50, 1e50], color = 'chocolate', alpha = 0.1)
 
-                rho = signalduration(Etot, m, Elist, t, R, 1)[0]
-                coupling = d_probe(Elist, rho, eta, Etot, m, t, R, 1)
+                rho, coherence = signal_duration(Etot, m, Elist, t, R, 1)
+                coupling = d2_probe(Elist, rho, coherence, eta)
                 axij.plot(m_bench*wmp_contour, coupling, c = 'k', linewidth = 2, alpha = 1)
                 axij.plot([m, m], [1e-10, 1e50], c = 'k', linestyle = '--')
                 axij.fill_between([1e-30, m], 1e-10, 1e50, facecolor = 'none', hatch = "/", edgecolor = 'k', alpha = 0.3)
@@ -469,8 +500,8 @@ def plots(R, E, coupling_type, coupling_order):
                 if R < 1e5:
                     fillregion_y = [min([d_screen(fillregion_x,R_exp,rho_exp,m,K_E)[l],d_from_delta_t(dt_1day,R,m,fillregion_x,30e-6,K_space)[l]]) for l in range(len(fillregion_x))]
                     
-                    rho = signalduration(Etot, m, fillregion_x, t, R, 1)[0]
-                    coupling = d_probe(fillregion_x, rho, eta, Etot, m, t, R, 1)
+                    rho, coherence = signal_duration(Etot, m, fillregion_x, t, R, 1)
+                    coupling = d2_probe(fillregion_x, rho, coherence, eta)
                     axij.fill_between(fillregion_x, coupling, fillregion_y, where = coupling < fillregion_y, color = 'tab:green',alpha = 0.3)
                 else:
                     axij.plot(Elist, d_from_delta_t(dt_1day,R,m,Elist,1e-6,K_space), color = colorlist[2],linewidth = 2,linestyle = '--'  )
@@ -478,7 +509,9 @@ def plots(R, E, coupling_type, coupling_order):
                     
                     fillregion_y = [min([d_screen(fillregion_x,R_exp,rho_exp,m,K_E)[l],d_from_delta_t(dt_1day,R,m,fillregion_x,1e-6,K_space)[l]]) for l in range(len(fillregion_x))]
                     
-                    axij.fill_between(fillregion_x,d_probe(fillregion_x,signalduration(Etot,m,fillregion_x,t,R,1)[0],eta,Etot,m,t,R,1),fillregion_y,where= d_probe(fillregion_x,signalduration(Etot,m,fillregion_x,t,R,1)[0],eta,Etot,m,t,R,1)< fillregion_y, color = 'tab:green',alpha = 0.3)
+                    rho, coherence = signal_duration(Etot,m,fillregion_x,t,R,1)
+                    coupling = d2_probe(fillregion_x,rho,coherence,eta)
+                    axij.fill_between(fillregion_x,coupling,fillregion_y,where= coupling < fillregion_y, color = 'tab:green',alpha = 0.3)
                     axij.fill_between(Elist,d_from_delta_t(dt_1day,R,m,Elist,1e-6,K_space),d_from_delta_t(dt_1day,R,m,Elist,30e-6,K_space),color = colorlist[2],alpha = 0.1)
                     axij.fill_between(Elist,d_from_delta_t(dt,R,m,Elist,1e-6,K_space),d_from_delta_t(dt,R,m,Elist,30e-6,K_space),color = colorlist[0],alpha = 0.1)
 
@@ -584,9 +617,7 @@ if __name__ == "__main__":
     # Galactic
     R_GC = 1e4
     E_GC = 1e-2
-    
-    Etot = 1 #Solar Masses
-    
+        
     for i in coupling_types:
         for j in coupling_orders:
             plots(R_GC,E_GC,i,j)
