@@ -403,7 +403,6 @@ def plots(R, Etot, coupling_type, coupling_order):
     Microscope_x, Microscope_y = [], []
     EotWashEP_x, EotWashEP_y = [], []
     FifthForce_x, FifthForce_y = [], []
-    QuadSPC_x, QuadSPC_y = [], []
 
     with open('Linear Scalar Photon/MICROSCOPE.txt', 'r') as f:
         for line in f:
@@ -466,10 +465,6 @@ def plots(R, Etot, coupling_type, coupling_order):
                 
                 setup_axes(axij, formatter, coupling_order)
                 plot_couplings_screened(axij, Elist, m, K_E, K_atm, R_atm, rho_atm, R_exp, rho_exp)
-                
-                # NOTE - QuadSPC_x, QuadSPC_y is never defined/ empty arrays
-                axij.plot(QuadSPC_x, QuadSPC_y, color='k', linewidth = 3)
-                axij.fill_between(QuadSPC_x, QuadSPC_y, 1e100, color = 'k', alpha = 0.05)
                 
                 colorlist = ["tab:red", "tab:orange", 'tab:purple']
 
