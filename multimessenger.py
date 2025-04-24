@@ -363,6 +363,21 @@ def plot_E_unc(ax, E_unc):
     ax.plot([E_unc, E_unc], [1e50, 1e-50], color = 'chocolate', linestyle = '--')
     ax.fill_between([1e-50, E_unc], [1e-50, 1e-50], [1e50, 1e50], color = 'chocolate', alpha = 0.1)
 
+def label_omega_lt_mass(ax, m, coupling_order):
+    # Label region in parameter space where omega < scalar field mass
+    if m > 1e-20:
+        pos_x = m/200
+        pos_y = {
+            "linear": 1e-7,
+            "quad": 1e12
+        }
+        txt = r'$\omega<m_{\phi}$'
+        bbox_style = dict(facecolor = 'whitesmoke',
+                          alpha = 1,
+                          edgecolor = 'k',
+                          boxstyle = 'round,pad=.1')
+        ax.text(pos_x, pos_y[coupling_order], txt, color = 'k', bbox = bbox_style)
+
 def plots(R, Etot, coupling_type, coupling_order):
     m_bench = 1e-21 # in eV
     m_bench2 = 1e-18
@@ -452,13 +467,8 @@ def plots(R, Etot, coupling_type, coupling_order):
                 plot_MICROSCOPE(axij, Elist, Microscope_m)
                 plot_FifthForce(axij, t, Elist, E_unc, FifthForce_m)
                 plot_coupling(axij, Elist, t, m, R, eta, Etot, m_bench, wmp_contour, coupling_order)
-                
-                # Label region in parameter space where omega < scalar field mass
-                if m > 1e-20:
-                    ax[i,j].text(m/200, 1e-7, r'$\omega<m_{\phi}$', color = 'k', bbox = dict(facecolor = 'whitesmoke', alpha = 1, edgecolor = 'k',boxstyle = 'round,pad=.1'))   
-                
+                label_omega_lt_mass(axij, m, coupling_order)      
                 plot_fill_region(axij, Elist, Microscope_m, t, m, R, eta, Etot, E_unc, dt, K_space)
-
                 annotate_plot(axij, i, j, m, dt, R, E_unc, coupling_type, filename)
                     
                 ax[0,j].set_title(r'$\log_{10}(m_{\phi}/{\rm eV}) = $'+str(int(np.log10(mass[0][j]))), pad = 20)
@@ -477,13 +487,7 @@ def plots(R, Etot, coupling_type, coupling_order):
                 plot_couplings_screened(axij, Elist, m, K_E, K_atm, R_atm, rho_atm, R_exp, rho_exp)
                 plot_E_unc(axij, E_unc)
                 plot_coupling(axij, Elist, t, m, R, eta, Etot, m_bench, wmp_contour, coupling_order)
-                
-                if m > 1e-20:
-                    pos_x = m/200
-                    pos_y = 1e12
-                    txt = r'$\omega<m_{\phi}$'
-                    bbox_style = dict(facecolor = 'whitesmoke', alpha = 1, edgecolor = 'k', boxstyle = 'round,pad=.1')
-                    axij.text(pos_x, pos_y, txt, color = 'k', bbox = bbox_style)
+                label_omega_lt_mass(axij, m, coupling_order)
                 
                 colorlist = ["tab:red", "tab:orange", 'tab:purple']
                 ddt = d_from_delta_t(dt_1day, R, m, Elist, 30e-6, K_space)
