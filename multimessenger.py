@@ -417,7 +417,7 @@ def plot_supernova(ax, Elist, coupling_type):
         ax.fill_between(Elist, config["line"], 1e100, color = 'gray', alpha = 0.1)
 
 def plot_omega_ts(ax, E_unc, filename):
-    """ Annotate plot regions """
+    """ Plot omega*t_star <~ 2*pi """
     # Define lambda for bbox style
     bbox_style = lambda color: dict(facecolor = 'white', alpha = 1, edgecolor = color, boxstyle = 'round,pad=.1')
     
