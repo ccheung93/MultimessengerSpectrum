@@ -404,6 +404,47 @@ def label_omega_lt_mass(ax, m, coupling_order):
                           boxstyle = 'round,pad=.1')
         ax.text(pos_x, pos_y[coupling_order], txt, color = 'k', bbox = bbox_style)
 
+def plot_supernova(ax, Elist, coupling_type):
+    supernova_config = {
+        "photon": {
+            "ylim": (.5e6, 8e32),
+            "txt_y": 3e29,
+            "lbl_y": 3e31,
+            "txt": r'${\rm Supernova}~\gamma \gamma \rightarrow \phi \phi$',
+            "line": [d_from_Lambda(1e12)] * len(Elist)
+        },
+        "electron": {
+            "ylim": (.5e9, 5e33),
+            "txt_y": 3e29,
+            "lbl_y": 1e32,
+            "txt": r'${\rm Supernova}~e^+ e^- \rightarrow \phi \phi$',
+            "line": [5e31] * len(Elist) # NOTE - should this be d_from_Lambda(5e31)?
+        },
+        "gluon": {
+            "ylim": (.5e4, 5e30),
+            "txt_y": 3e26,
+            "lbl_y": 3e29,
+            "txt": r'${\rm Supernova}~N N \rightarrow N N \phi \phi$',
+            "line": [d_from_Lambda(15e12)] * len(Elist)
+        }
+    }
+    
+    txt_x = 1e-19
+    lbl_x = 1e-19
+    omega_txt = r'$\omega\,t_{*} \lesssim \, 2\pi$'
+    bbox_style = dict(facecolor='white', 
+                      alpha = 1, 
+                      edgecolor='chocolate', 
+                      boxstyle='round,pad=.1')
+    
+    if coupling_type in supernova_config:
+        config = supernova_config[coupling_type]
+        ax.set_ylim(*config["ylim"])
+        ax.text(txt_x, config["txt_y"], omega_txt, color = 'tab:brown', bbox = bbox_style)
+        ax.text(lbl_x, config["lbl_y"], config["txt"], fontsize = 30, color = 'black')
+        ax.plot(Elist, config["line"], color = 'gray', linewidth = 3)
+        ax.fill_between(Elist, config["line"], 1e100, color = 'gray', alpha = 0.1)
+
 def plots(R, Etot, coupling_type, coupling_order):
     m_bench = 1e-21 # in eV
     m_bench2 = 1e-18
@@ -516,29 +557,7 @@ def plots(R, Etot, coupling_type, coupling_order):
                 label_omega_lt_mass(axij, m, coupling_order)
                 plot_d_from_delta_t(axij, Elist, m, R, dt, 30e-6, K_space)
                 plot_fill_region_quad(axij, Elist, t, m, R, eta, dt, Etot, E_unc, R_exp, rho_exp, K_E, K_space)
-
-                if coupling_type == 'photon': 
-                    ax[i,j].set_ylim(.5e6,8e32)
-                    ax[i,j].text(1e-19,3e29,r'$\omega\,t_{*} \lesssim \, 2\pi$',color = 'tab:brown',bbox=dict(facecolor='white', alpha = 1, edgecolor='chocolate',boxstyle='round,pad=.1'))
-                    ax[i,j].text(1.5e-20,3e31,r'${\rm Supernova}~\gamma \gamma \rightarrow \phi \phi$', fontsize =30, color = 'black')
-                    ax[i,j].plot(Elist, [d_from_Lambda(1e12) for i in range(len(Elist))], color = 'gray',linewidth = 3)
-                    ax[i,j].fill_between(Elist, [d_from_Lambda(1e12) for i in range(len(Elist))], 1e100, color = 'gray', alpha = 0.1)
-                    
-                    
-                if coupling_type == 'electron': 
-                    ax[i,j].set_ylim(.5e9,5e33)
-                    ax[i,j].text(1e-19,3e29,r'$\omega\,t_{*} \lesssim \, 2\pi$',color = 'tab:brown',bbox=dict(facecolor='white', alpha = 1, edgecolor='chocolate',boxstyle='round,pad=.1'))
-                    ax[i,j].text(1.5e-20,1e32,r'${\rm Supernova}~e^+ e^- \rightarrow \phi \phi$', fontsize =30, color = 'black')
-                    ax[i,j].plot(Elist, [5e31 for i in range(len(Elist))], color = 'gray',linewidth = 3)
-                    ax[i,j].fill_between(Elist, [5e31 for i in range(len(Elist))], 1e100, color = 'gray', alpha = 0.1)
-                    
-                if coupling_type == 'gluon': 
-                    ax[i,j].set_ylim(.5e4,5e30)
-                    ax[i,j].text(1e-19,3e26,r'$\omega\,t_{*} \lesssim \, 2\pi$',color = 'tab:brown',bbox=dict(facecolor='white', alpha = 1, edgecolor='chocolate',boxstyle='round,pad=.1'))
-                    ax[i,j].text(1.5e-20,3e29,r'${\rm Supernova}~N N \rightarrow N N \phi \phi$', fontsize =30, color = 'black')
-                    ax[i,j].plot(Elist, [d_from_Lambda(15e12) for i in range(len(Elist))], color = 'gray',linewidth = 3)
-                    ax[i,j].fill_between(Elist, [d_from_Lambda(15e12) for i in range(len(Elist))], 1e100, color = 'gray', alpha = 0.1)
-
+                plot_supernova(axij, Elist, coupling_type)
 
                 if filename == '10Mpc_'+coupling_type+'_quad_dilatoniccoupling.pdf':
                     ax[i,j].text(m*omegaoverm_noscreen(dt,R)/4,1e16,r'$\delta t\, \gtrsim \, 1~{\rm yr}~ \uparrow $',rotation = 90, fontsize = 25, color = 'tab:red',bbox=dict(facecolor='white', alpha = 1, edgecolor='tab:red',boxstyle='round,pad=.1'))
