@@ -21,6 +21,7 @@ PLANCK_MASS_EV = 1.2e28 # Planck mass in eV
 GPC_TO_PC = 1e9 # gigaparsec to parsecs
 PC_TO_METERS = 3.086e16 # parsecs to meters
 PI = np.pi 
+COLORLIST = ["tab:red", "tab:orange", "tab:purple"]
 
 
 def signal_duration(Etot, mass, energies, burst_duration, distance_pc, aw, integration_time=1): 
@@ -273,9 +274,14 @@ def plot_coupling(ax, Elist, t, m, R, eta, Etot, m_bench, wmp_contour, coupling_
     ax.plot([m, m], [min_y, 1e50], c = 'k', linestyle = '--')
     ax.fill_between([1e-30, m], min_y, 1e50, facecolor = 'none', hatch = "/", edgecolor = 'k', alpha = 0.3)
 
-def plot_fill_region(ax, Elist, Microscope_m, t, m, R, eta, Etot, E_unc, dt, K_space):
-    colorlist = ["tab:red", "tab:orange",'tab:purple']
+def plot_d_from_delta_t(ax, Elist, m, R, dt, K_space):
+    d = d_from_delta_t(DAY_TO_SEC, R, m, Elist, 30e-6, K_space)
+    ax.plot(Elist, d, color = COLORLIST[2], linewidth = 2, linestyle = '--'  )
     
+    d = d_from_delta_t(dt, R, m, Elist, 30e-6, K_space)
+    ax.plot(Elist, d, color = COLORLIST[0], linewidth = 2, linestyle = '--'  )
+
+def plot_fill_region(ax, Elist, Microscope_m, t, m, R, eta, Etot, E_unc, dt, K_space):    
     omega_over_m = omegaoverm_noscreen(DAY_TO_SEC, R)
     fillregion_x = np.array([Elist[l] for l in range(len(Elist)) if all([Elist[l] > E_unc, Elist[l] > m*omega_over_m])])
     fillregion_y = [Microscope_m[l] for l in range(len(fillregion_x))]
@@ -283,12 +289,6 @@ def plot_fill_region(ax, Elist, Microscope_m, t, m, R, eta, Etot, E_unc, dt, K_s
     rho, coherence = signal_duration(Etot, m, fillregion_x, t, R, 1)
     coupling = d1_probe(fillregion_x, rho, coherence, eta)
     ax.fill_between(fillregion_x, coupling, fillregion_y, where = coupling < fillregion_y, color = 'tab:green',alpha = 0.3)
-    
-    d = d_from_delta_t(DAY_TO_SEC, R, m, Elist, 30e-6, K_space)
-    ax.plot(Elist, d, color = colorlist[2],linewidth = 2,linestyle = '--'  )
-    
-    d = d_from_delta_t(dt, R, m, Elist, 30e-6, K_space)
-    ax.plot(Elist, d, color = colorlist[0],linewidth = 2,linestyle = '--'  )
 
 def annotate_plot(ax, i, j, m, dt, R, E_unc, coupling_type, filename):
     """ Annotate plot regions """
@@ -469,6 +469,7 @@ def plots(R, Etot, coupling_type, coupling_order):
                 plot_coupling(axij, Elist, t, m, R, eta, Etot, m_bench, wmp_contour, coupling_order)
                 label_omega_lt_mass(axij, m, coupling_order)      
                 plot_fill_region(axij, Elist, Microscope_m, t, m, R, eta, Etot, E_unc, dt, K_space)
+                plot_d_from_delta_t(axij, Elist, m, R, dt, K_space)
                 annotate_plot(axij, i, j, m, dt, R, E_unc, coupling_type, filename)
                     
                 ax[0,j].set_title(r'$\log_{10}(m_{\phi}/{\rm eV}) = $'+str(int(np.log10(mass[0][j]))), pad = 20)
@@ -488,13 +489,7 @@ def plots(R, Etot, coupling_type, coupling_order):
                 plot_E_unc(axij, E_unc)
                 plot_coupling(axij, Elist, t, m, R, eta, Etot, m_bench, wmp_contour, coupling_order)
                 label_omega_lt_mass(axij, m, coupling_order)
-                
-                colorlist = ["tab:red", "tab:orange", 'tab:purple']
-                ddt = d_from_delta_t(dt_1day, R, m, Elist, 30e-6, K_space)
-                axij.plot(Elist, ddt, color = colorlist[2], linewidth = 2, linestyle = '--'  )
-                
-                ddt = d_from_delta_t(dt, R, m, Elist, 30e-6, K_space)
-                axij.plot(Elist, ddt, color = colorlist[0], linewidth = 2, linestyle = '--'  )
+                plot_d_from_delta_t(axij, Elist, m, R, dt, K_space)
                 
                 fillregion_x = np.array([Elist[l] for l in range(len(Elist)) if Elist[l] > E_unc])
                 
@@ -503,18 +498,18 @@ def plots(R, Etot, coupling_type, coupling_order):
                     
                     rho, coherence = signal_duration(Etot, m, fillregion_x, t, R, 1)
                     coupling = d2_probe(fillregion_x, rho, coherence, eta)
-                    axij.fill_between(fillregion_x, coupling, fillregion_y, where = coupling < fillregion_y, color = 'tab:green',alpha = 0.3)
+                    axij.fill_between(fillregion_x, coupling, fillregion_y, where = coupling < fillregion_y, color = 'tab:green', alpha = 0.3)
                 else:
-                    axij.plot(Elist, d_from_delta_t(dt_1day,R,m,Elist,1e-6,K_space), color = colorlist[2],linewidth = 2,linestyle = '--'  )
-                    axij.plot(Elist, d_from_delta_t(dt,R,m,Elist,1e-6,K_space), color = colorlist[0],linewidth = 2,linestyle = '--'  )
+                    axij.plot(Elist, d_from_delta_t(dt_1day,R,m,Elist,1e-6,K_space), color = COLORLIST[2],linewidth = 2,linestyle = '--'  )
+                    axij.plot(Elist, d_from_delta_t(dt,R,m,Elist,1e-6,K_space), color = COLORLIST[0],linewidth = 2,linestyle = '--'  )
                     
                     fillregion_y = [min([d_screen(fillregion_x,R_exp,rho_exp,m,K_E)[l],d_from_delta_t(dt_1day,R,m,fillregion_x,1e-6,K_space)[l]]) for l in range(len(fillregion_x))]
                     
-                    rho, coherence = signal_duration(Etot,m,fillregion_x,t,R,1)
-                    coupling = d2_probe(fillregion_x,rho,coherence,eta)
-                    axij.fill_between(fillregion_x,coupling,fillregion_y,where= coupling < fillregion_y, color = 'tab:green',alpha = 0.3)
-                    axij.fill_between(Elist,d_from_delta_t(dt_1day,R,m,Elist,1e-6,K_space),d_from_delta_t(dt_1day,R,m,Elist,30e-6,K_space),color = colorlist[2],alpha = 0.1)
-                    axij.fill_between(Elist,d_from_delta_t(dt,R,m,Elist,1e-6,K_space),d_from_delta_t(dt,R,m,Elist,30e-6,K_space),color = colorlist[0],alpha = 0.1)
+                    rho, coherence = signal_duration(Etot, m, fillregion_x, t, R, 1)
+                    coupling = d2_probe(fillregion_x, rho, coherence, eta)
+                    axij.fill_between(fillregion_x, coupling, fillregion_y, where = coupling < fillregion_y, color = 'tab:green', alpha = 0.3)
+                    axij.fill_between(Elist,d_from_delta_t(dt_1day,R,m,Elist,1e-6,K_space),d_from_delta_t(dt_1day,R,m,Elist,30e-6,K_space),color = COLORLIST[2],alpha = 0.1)
+                    axij.fill_between(Elist,d_from_delta_t(dt,R,m,Elist,1e-6,K_space),d_from_delta_t(dt,R,m,Elist,30e-6,K_space),color = COLORLIST[0],alpha = 0.1)
 
                 
                 if coupling_type == 'photon': 
