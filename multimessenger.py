@@ -274,14 +274,14 @@ def plot_coupling(ax, Elist, t, m, R, eta, Etot, m_bench, wmp_contour, coupling_
     ax.plot([m, m], [min_y, 1e50], c = 'k', linestyle = '--')
     ax.fill_between([1e-30, m], min_y, 1e50, facecolor = 'none', hatch = "/", edgecolor = 'k', alpha = 0.3)
 
-def plot_d_from_delta_t(ax, Elist, m, R, dt, K_space):
-    d = d_from_delta_t(DAY_TO_SEC, R, m, Elist, 30e-6, K_space)
+def plot_d_from_delta_t(ax, Elist, m, R, dt, Dg, K_space):
+    d = d_from_delta_t(DAY_TO_SEC, R, m, Elist, Dg, K_space)
     ax.plot(Elist, d, color = COLORLIST[2], linewidth = 2, linestyle = '--'  )
     
-    d = d_from_delta_t(dt, R, m, Elist, 30e-6, K_space)
+    d = d_from_delta_t(dt, R, m, Elist, Dg, K_space)
     ax.plot(Elist, d, color = COLORLIST[0], linewidth = 2, linestyle = '--'  )
 
-def plot_fill_region(ax, Elist, Microscope_m, t, m, R, eta, Etot, E_unc, dt, K_space):    
+def plot_fill_region(ax, Elist, Microscope_m, t, m, R, eta, Etot, E_unc):    
     omega_over_m = omegaoverm_noscreen(DAY_TO_SEC, R)
     fillregion_x = np.array([Elist[l] for l in range(len(Elist)) if all([Elist[l] > E_unc, Elist[l] > m*omega_over_m])])
     fillregion_y = [Microscope_m[l] for l in range(len(fillregion_x))]
@@ -289,6 +289,32 @@ def plot_fill_region(ax, Elist, Microscope_m, t, m, R, eta, Etot, E_unc, dt, K_s
     rho, coherence = signal_duration(Etot, m, fillregion_x, t, R, 1)
     coupling = d1_probe(fillregion_x, rho, coherence, eta)
     ax.fill_between(fillregion_x, coupling, fillregion_y, where = coupling < fillregion_y, color = 'tab:green',alpha = 0.3)
+
+def plot_fill_region_quad(ax, Elist, t, m, R, eta, dt, Etot, E_unc, R_exp, rho_exp, K_E, K_space):
+    fillregion_x = Elist[Elist > E_unc]
+    rho, coherence = signal_duration(Etot, m, fillregion_x, t, R, 1)
+    coupling = d2_probe(fillregion_x, rho, coherence, eta)
+    d_exp = d_screen(fillregion_x, R_exp, rho_exp, m, K_E)
+    
+    if R < 1e5:
+        ddt_day = d_from_delta_t(DAY_TO_SEC, R, m, fillregion_x, 30e-6, K_space)
+        fillregion_y = np.minimum(d_exp, ddt_day)
+
+        ax.fill_between(fillregion_x, coupling, fillregion_y, where = coupling < fillregion_y, color = 'tab:green', alpha = 0.3)
+    else:
+        plot_d_from_delta_t(ax, Elist, m, R, dt, 1e-6, K_space)
+        
+        ddt_day_fill = d_from_delta_t(DAY_TO_SEC, R, m, fillregion_x, 1e-6, K_space)
+        fillregion_y = np.minimum(d_exp, ddt_day_fill)
+        
+        ax.fill_between(fillregion_x, coupling, fillregion_y, where = coupling < fillregion_y, color = 'tab:green', alpha = 0.3)
+        
+        ddt_day1 = d_from_delta_t(DAY_TO_SEC, R, m, Elist, 1e-6, K_space)
+        ddt1 = d_from_delta_t(dt, R, m, Elist, 1e-6, K_space)
+        ddt_day30 = d_from_delta_t(DAY_TO_SEC, R, m, Elist, 30e-6, K_space)
+        ddt30 = d_from_delta_t(dt, R, m, Elist, 30e-6, K_space)
+        ax.fill_between(Elist, ddt_day1, ddt_day30, color = COLORLIST[2], alpha = 0.1)
+        ax.fill_between(Elist, ddt1, ddt30, color = COLORLIST[0], alpha = 0.1)
 
 def annotate_plot(ax, i, j, m, dt, R, E_unc, coupling_type, filename):
     """ Annotate plot regions """
@@ -412,7 +438,6 @@ def plots(R, Etot, coupling_type, coupling_order):
 
     dt = 1 * 3.154e7 #year
     dt_100 = 100 * 3.154e7
-    dt_1day = 60*60*24 #1day in seconds
     Elist = mass[0][0]*wmp_contour
     labels = [r'$\mathcal{E}_{\phi}= 10^5~m_{\phi}$',r'$\mathcal{E}_{\phi}= 10^7~m_{\phi}$']
     Lambda_earth_screen = [1e22 for i in range(len(Elist))] 
@@ -468,8 +493,8 @@ def plots(R, Etot, coupling_type, coupling_order):
                 plot_FifthForce(axij, t, Elist, E_unc, FifthForce_m)
                 plot_coupling(axij, Elist, t, m, R, eta, Etot, m_bench, wmp_contour, coupling_order)
                 label_omega_lt_mass(axij, m, coupling_order)      
-                plot_fill_region(axij, Elist, Microscope_m, t, m, R, eta, Etot, E_unc, dt, K_space)
-                plot_d_from_delta_t(axij, Elist, m, R, dt, K_space)
+                plot_fill_region(axij, Elist, Microscope_m, t, m, R, eta, Etot, E_unc)
+                plot_d_from_delta_t(axij, Elist, m, R, dt, 30e-6, K_space)
                 annotate_plot(axij, i, j, m, dt, R, E_unc, coupling_type, filename)
                     
                 ax[0,j].set_title(r'$\log_{10}(m_{\phi}/{\rm eV}) = $'+str(int(np.log10(mass[0][j]))), pad = 20)
@@ -489,29 +514,9 @@ def plots(R, Etot, coupling_type, coupling_order):
                 plot_E_unc(axij, E_unc)
                 plot_coupling(axij, Elist, t, m, R, eta, Etot, m_bench, wmp_contour, coupling_order)
                 label_omega_lt_mass(axij, m, coupling_order)
-                plot_d_from_delta_t(axij, Elist, m, R, dt, K_space)
-                
-                fillregion_x = np.array([Elist[l] for l in range(len(Elist)) if Elist[l] > E_unc])
-                
-                if R < 1e5:
-                    fillregion_y = [min([d_screen(fillregion_x,R_exp,rho_exp,m,K_E)[l],d_from_delta_t(dt_1day,R,m,fillregion_x,30e-6,K_space)[l]]) for l in range(len(fillregion_x))]
-                    
-                    rho, coherence = signal_duration(Etot, m, fillregion_x, t, R, 1)
-                    coupling = d2_probe(fillregion_x, rho, coherence, eta)
-                    axij.fill_between(fillregion_x, coupling, fillregion_y, where = coupling < fillregion_y, color = 'tab:green', alpha = 0.3)
-                else:
-                    axij.plot(Elist, d_from_delta_t(dt_1day,R,m,Elist,1e-6,K_space), color = COLORLIST[2],linewidth = 2,linestyle = '--'  )
-                    axij.plot(Elist, d_from_delta_t(dt,R,m,Elist,1e-6,K_space), color = COLORLIST[0],linewidth = 2,linestyle = '--'  )
-                    
-                    fillregion_y = [min([d_screen(fillregion_x,R_exp,rho_exp,m,K_E)[l],d_from_delta_t(dt_1day,R,m,fillregion_x,1e-6,K_space)[l]]) for l in range(len(fillregion_x))]
-                    
-                    rho, coherence = signal_duration(Etot, m, fillregion_x, t, R, 1)
-                    coupling = d2_probe(fillregion_x, rho, coherence, eta)
-                    axij.fill_between(fillregion_x, coupling, fillregion_y, where = coupling < fillregion_y, color = 'tab:green', alpha = 0.3)
-                    axij.fill_between(Elist,d_from_delta_t(dt_1day,R,m,Elist,1e-6,K_space),d_from_delta_t(dt_1day,R,m,Elist,30e-6,K_space),color = COLORLIST[2],alpha = 0.1)
-                    axij.fill_between(Elist,d_from_delta_t(dt,R,m,Elist,1e-6,K_space),d_from_delta_t(dt,R,m,Elist,30e-6,K_space),color = COLORLIST[0],alpha = 0.1)
+                plot_d_from_delta_t(axij, Elist, m, R, dt, 30e-6, K_space)
+                plot_fill_region_quad(axij, Elist, t, m, R, eta, dt, Etot, E_unc, R_exp, rho_exp, K_E, K_space)
 
-                
                 if coupling_type == 'photon': 
                     ax[i,j].set_ylim(.5e6,8e32)
                     ax[i,j].text(1e-19,3e29,r'$\omega\,t_{*} \lesssim \, 2\pi$',color = 'tab:brown',bbox=dict(facecolor='white', alpha = 1, edgecolor='chocolate',boxstyle='round,pad=.1'))
@@ -537,7 +542,7 @@ def plots(R, Etot, coupling_type, coupling_order):
 
                 if filename == '10Mpc_'+coupling_type+'_quad_dilatoniccoupling.pdf':
                     ax[i,j].text(m*omegaoverm_noscreen(dt,R)/4,1e16,r'$\delta t\, \gtrsim \, 1~{\rm yr}~ \uparrow $',rotation = 90, fontsize = 25, color = 'tab:red',bbox=dict(facecolor='white', alpha = 1, edgecolor='tab:red',boxstyle='round,pad=.1'))
-                    ax[i,j].text(m*omegaoverm_noscreen(dt_1day,R)/4,1e16,r'$\delta t\, \gtrsim \, 1~{\rm day}~ \uparrow$',rotation = 90, fontsize = 25, color = 'tab:purple',bbox=dict(facecolor='white', alpha = 1, edgecolor='tab:purple',boxstyle='round,pad=.1'))
+                    ax[i,j].text(m*omegaoverm_noscreen(DAY_TO_SEC,R)/4,1e16,r'$\delta t\, \gtrsim \, 1~{\rm day}~ \uparrow$',rotation = 90, fontsize = 25, color = 'tab:purple',bbox=dict(facecolor='white', alpha = 1, edgecolor='tab:purple',boxstyle='round,pad=.1'))
                     if coupling_type == 'photon':
                         ax[i,j].text(3e-13,2e12/K_E,r'$d_{e,{\rm crit}}^{(2)\, \rm\oplus}$', fontsize =35, color = 'tab:blue')
                         ax[i,j].text(1e-12,5e21/K_atm,r'$d_{e,{\rm crit}}^{(2)\, \rm atm}$', fontsize =35, color = 'tab:blue')
