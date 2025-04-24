@@ -258,14 +258,20 @@ def plot_FifthForce(ax, t, Elist, E_unc, FifthForce_m):
     ax.plot([E_unc, E_unc], [1e50, 1e-50], color = 'chocolate', linestyle = '--')
     ax.fill_between([1e-50, E_unc], [1e-50, 1e-50], [1e50, 1e50], color = 'chocolate', alpha = 0.1)
 
-def plot_coupling(ax, Elist, t, m, R, eta, Etot, m_bench, wmp_contour):
+def plot_coupling(ax, Elist, t, m, R, eta, Etot, m_bench, wmp_contour, coupling_order):
     """ Plot coupling limits """
     rho, coherence = signal_duration(Etot, m, Elist, t, R, 1)
-    coupling = d1_probe(Elist, rho, coherence, eta)
+    
+    if coupling_order == "linear":
+        coupling = d1_probe(Elist, rho, coherence, eta)
+        min_y = 1e-50
+    elif coupling_order == "quad":
+        coupling = d2_probe(Elist, rho, coherence, eta)
+        min_y = 1e-10
     
     ax.plot(m_bench*wmp_contour, coupling, c = 'k', linewidth = 2, alpha = 1)
-    ax.plot([m, m], [1e-50, 1e50], c = 'k',linestyle = '--')
-    ax.fill_between([1e-30, m], 1e-50, 1e50, facecolor = 'none', hatch = "/", edgecolor = 'k', alpha = 0.3)
+    ax.plot([m, m], [min_y, 1e50], c = 'k', linestyle = '--')
+    ax.fill_between([1e-30, m], min_y, 1e50, facecolor = 'none', hatch = "/", edgecolor = 'k', alpha = 0.3)
 
 def plot_fill_region(ax, Elist, Microscope_m, t, m, R, eta, Etot, E_unc, dt, K_space):
     colorlist = ["tab:red", "tab:orange",'tab:purple']
@@ -352,6 +358,10 @@ def plot_couplings_screened(ax, Elist, m, K_E, K_atm, R_atm, rho_atm, R_exp, rho
     ax.plot(Elist, d_screen_atm, color = 'tab:blue', linestyle = 'dashed')
     ax.plot(Elist, d_screen_exp, color = 'tab:blue', linestyle = 'dotted')
     ax.plot(Elist, d_screen_earth, color = 'tab:blue', linewidth = 3)
+
+def plot_E_unc(ax, E_unc):
+    ax.plot([E_unc, E_unc], [1e50, 1e-50], color = 'chocolate', linestyle = '--')
+    ax.fill_between([1e-50, E_unc], [1e-50, 1e-50], [1e50, 1e50], color = 'chocolate', alpha = 0.1)
 
 def plots(R, Etot, coupling_type, coupling_order):
     m_bench = 1e-21 # in eV
@@ -441,7 +451,7 @@ def plots(R, Etot, coupling_type, coupling_order):
                 setup_axes(axij, formatter, coupling_order)
                 plot_MICROSCOPE(axij, Elist, Microscope_m)
                 plot_FifthForce(axij, t, Elist, E_unc, FifthForce_m)
-                plot_coupling(axij, Elist, t, m, R, eta, Etot, m_bench, wmp_contour)
+                plot_coupling(axij, Elist, t, m, R, eta, Etot, m_bench, wmp_contour, coupling_order)
                 
                 # Label region in parameter space where omega < scalar field mass
                 if m > 1e-20:
@@ -465,17 +475,8 @@ def plots(R, Etot, coupling_type, coupling_order):
                 
                 setup_axes(axij, formatter, coupling_order)
                 plot_couplings_screened(axij, Elist, m, K_E, K_atm, R_atm, rho_atm, R_exp, rho_exp)
-                
-                colorlist = ["tab:red", "tab:orange", 'tab:purple']
-
-                axij.plot([E_unc, E_unc], [1e50, 1e-50], color = 'chocolate', linestyle = '--')
-                axij.fill_between([1e-50, E_unc], [1e-50, 1e-50], [1e50, 1e50], color = 'chocolate', alpha = 0.1)
-
-                rho, coherence = signal_duration(Etot, m, Elist, t, R, 1)
-                coupling = d2_probe(Elist, rho, coherence, eta)
-                axij.plot(m_bench*wmp_contour, coupling, c = 'k', linewidth = 2, alpha = 1)
-                axij.plot([m, m], [1e-10, 1e50], c = 'k', linestyle = '--')
-                axij.fill_between([1e-30, m], 1e-10, 1e50, facecolor = 'none', hatch = "/", edgecolor = 'k', alpha = 0.3)
+                plot_E_unc(axij, E_unc)
+                plot_coupling(axij, Elist, t, m, R, eta, Etot, m_bench, wmp_contour, coupling_order)
                 
                 if m > 1e-20:
                     pos_x = m/200
@@ -484,6 +485,7 @@ def plots(R, Etot, coupling_type, coupling_order):
                     bbox_style = dict(facecolor = 'whitesmoke', alpha = 1, edgecolor = 'k', boxstyle = 'round,pad=.1')
                     axij.text(pos_x, pos_y, txt, color = 'k', bbox = bbox_style)
                 
+                colorlist = ["tab:red", "tab:orange", 'tab:purple']
                 ddt = d_from_delta_t(dt_1day, R, m, Elist, 30e-6, K_space)
                 axij.plot(Elist, ddt, color = colorlist[2], linewidth = 2, linestyle = '--'  )
                 
