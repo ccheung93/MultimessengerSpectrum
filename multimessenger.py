@@ -316,10 +316,7 @@ def plot_fill_region_quad(ax, Elist, t, m, R, eta, dt, Etot, E_unc, R_exp, rho_e
         ax.fill_between(Elist, ddt_day1, ddt_day30, color = COLORLIST[2], alpha = 0.1)
         ax.fill_between(Elist, ddt1, ddt30, color = COLORLIST[0], alpha = 0.1)
 
-def annotate_plot(ax, i, j, m, dt, R, E_unc, coupling_type, filename):
-    """ Annotate plot regions """
-    
-    # Define lambda for bbox style
+def plot_time_labels(ax, m, dt, R, coupling_order):
     bbox_style = lambda color: dict(facecolor = 'white', alpha = 1, edgecolor = color, boxstyle = 'round,pad=.1')
     
     # Define time labels 
@@ -336,13 +333,24 @@ def annotate_plot(ax, i, j, m, dt, R, E_unc, coupling_type, filename):
             }
     ]
     
+    # Define y positions of text box based on coupling_order
+    pos_y_coupling = {
+        "linear": 1e-7,
+        "quad": 1e16
+    }
+    
     # Label regions in parameter space for each time label
     for label in time_labels:
         omega_over_m = omegaoverm_noscreen(label["delta_t"], R)
         pos_x = m*omega_over_m/4
-        pos_y = 1e-7
+        pos_y = pos_y_coupling[coupling_order]
         txt = label["txt"]
         ax.text(pos_x, pos_y, txt, rotation = 90, fontsize = 25, color = label["color"], bbox = bbox_style(label["color"]))
+    
+def annotate_plot(ax, i, j, m, dt, R, E_unc, coupling_type, filename):
+    """ Annotate plot regions """
+    # Define lambda for bbox style
+    bbox_style = lambda color: dict(facecolor = 'white', alpha = 1, edgecolor = color, boxstyle = 'round,pad=.1')
     
     # Define plot configurations for relevant distance scales
     distance_scale_config = {
@@ -445,26 +453,6 @@ def plot_supernova(ax, Elist, coupling_type):
         ax.plot(Elist, config["line"], color = 'gray', linewidth = 3)
         ax.fill_between(Elist, config["line"], 1e100, color = 'gray', alpha = 0.1)
 
-def plot_omega_over_m(ax, m, dt, R):
-    bbox_style = lambda color: dict(facecolor='white', 
-                      alpha = 1, 
-                      edgecolor=color, 
-                      boxstyle='round,pad=.1')
-    
-    omega_over_m_dt = omegaoverm_noscreen(dt, R)
-    pos_x = m*omega_over_m_dt/4
-    pos_y = 1e16
-    txt = r'$\delta t\, \gtrsim \, 1~{\rm yr}~ \uparrow $'
-    txt_color = "tab:red"
-    ax.text(pos_x, pos_y, txt, rotation = 90, fontsize = 25, color = txt_color, bbox = bbox_style(txt_color))
-                    
-    omega_over_m_day = omegaoverm_noscreen(DAY_TO_SEC, R)
-    pos_x = m*omega_over_m_day/4
-    pos_y = 1e16
-    txt = r'$\delta t\, \gtrsim \, 1~{\rm day}~ \uparrow$'
-    txt_color = "tab:purple"
-    ax.text(pos_x, pos_y, txt, rotation = 90, fontsize = 25, color = txt_color, bbox = bbox_style(txt_color))
-
 def plots(R, Etot, coupling_type, coupling_order):
     m_bench = 1e-21 # in eV
     m_bench2 = 1e-18
@@ -556,6 +544,7 @@ def plots(R, Etot, coupling_type, coupling_order):
                 label_omega_lt_mass(axij, m, coupling_order)      
                 plot_fill_region(axij, Elist, Microscope_m, t, m, R, eta, Etot, E_unc)
                 plot_d_from_delta_t(axij, Elist, m, R, dt, 30e-6, K_space)
+                plot_time_labels(axij, m, dt, R, coupling_order)
                 annotate_plot(axij, i, j, m, dt, R, E_unc, coupling_type, filename)
                     
                 ax[0,j].set_title(r'$\log_{10}(m_{\phi}/{\rm eV}) = $'+str(int(np.log10(mass[0][j]))), pad = 20)
@@ -580,7 +569,7 @@ def plots(R, Etot, coupling_type, coupling_order):
                 plot_supernova(axij, Elist, coupling_type)
 
                 if filename == '10Mpc_'+coupling_type+'_quad_dilatoniccoupling.pdf':
-                    plot_omega_over_m(axij, m, dt, R)
+                    plot_time_labels(axij, m, dt, R, coupling_order)
                     
                     if coupling_type == 'photon':
                         ax[i,j].text(3e-13,2e12/K_E,r'$d_{e,{\rm crit}}^{(2)\, \rm\oplus}$', fontsize =35, color = 'tab:blue')
@@ -608,8 +597,11 @@ def plots(R, Etot, coupling_type, coupling_order):
                         ax[i,j].text(7e-15,2e13/K_E,r'$d_{e,{\rm crit}}^{(2)\, \rm\oplus}$', fontsize =35, color = 'tab:blue')
                         ax[i,j].text(2e-12,1e19/K_atm,r'$d_{e,{\rm crit}}^{(2)\, \rm atm}$', fontsize =35, color = 'tab:blue')
                         ax[i,j].text(5e-11,7e25/K_E,r'$d_{e,{\rm crit}}^{(2)\, \rm app}$', fontsize =35, color = 'tab:blue')
+                        
+                        # These time labels are hard-coded
                         ax[i,j].text(3e-17,1e27,r'$\delta t\, \gtrsim \, 1~{\rm yr}~\uparrow$',rotation = 37, fontsize = 25, color = 'tab:red',bbox=dict(facecolor='white', alpha = 1, edgecolor='tab:red',boxstyle='round,pad=.1'))
                         ax[i,j].text(6e-16,9e26,r'$\delta t\, \gtrsim \, 1~{\rm day}~\uparrow$',rotation = 37, fontsize = 25, color = 'tab:purple',bbox=dict(facecolor='white', alpha = 1, edgecolor='tab:purple',boxstyle='round,pad=.1'))
+                        
                         if i == 1 and j==1:
                             ax[i,j].text(1e-11,1e8,r'$E_{\rm tot} = 10^{-2} M_{\odot}$'+'\n' +r'$R = 10~{\rm kpc}$'+ '\n'+r'$\,\eta_{\rm DM} = 10^{-19}/5900$',bbox=dict(facecolor='tab:purple', alpha = 0.0,edgecolor = 'white',boxstyle='round,pad=.2'))
 
@@ -617,8 +609,11 @@ def plots(R, Etot, coupling_type, coupling_order):
                         ax[i,j].text(5e-15,2e9/K_E,r'$d_{m_e,{\rm crit}}^{(2)\,\rm\oplus}$', fontsize =35, color = 'tab:blue')
                         ax[i,j].text(2e-13,5e21/K_atm,r'$d_{m_e,{\rm crit}}^{(2)\, \rm atm}$', fontsize =35, color = 'tab:blue')
                         ax[i,j].text(5e-11,7e25/K_E,r'$d_{m_e,{\rm crit}}^{(2)\,\rm app}$', fontsize =35, color = 'tab:blue')
+                        
+                        # These time labels are hard-coded
                         ax[i,j].text(3e-17,8.5e26,r'$\delta t\, \gtrsim \, 1~{\rm yr}~\uparrow$',rotation = 39, fontsize = 25, color = 'tab:red',bbox=dict(facecolor='white', alpha = 1, edgecolor='tab:red',boxstyle='round,pad=.1'))
                         ax[i,j].text(6e-16,8e26,r'$\delta t\, \gtrsim \, 1~{\rm day}~\uparrow$',rotation = 39, fontsize = 25, color = 'tab:purple',bbox=dict(facecolor='white', alpha = 1, edgecolor='tab:purple',boxstyle='round,pad=.1'))
+                        
                         if i == 1 and j==1:
                             ax[i,j].text(1e-11,1e10,r'$E_{\rm tot} = 10^{-2} M_{\odot}$'+'\n' +r'$R = 10~{\rm kpc}$'+ '\n'+r'$\,\eta_{\rm DM} = 10^{-17}$',bbox=dict(facecolor='tab:purple', alpha = 0.0,edgecolor = 'white',boxstyle='round,pad=.2'))
 
@@ -627,8 +622,11 @@ def plots(R, Etot, coupling_type, coupling_order):
                         ax[i,j].text(2e-14,2e9/K_E,r'$d_{g,{\rm crit}}^{(2)\, \rm\oplus}$', fontsize =35, color = 'tab:blue')
                         ax[i,j].text(2e-12,1e19/K_atm,r'$d_{g,{\rm crit}}^{(2)\, \rm atm}$', fontsize =35, color = 'tab:blue')
                         ax[i,j].text(5e-11,7e25/K_E,r'$d_{g,{\rm crit}}^{(2)\, \rm app}$', fontsize =35, color = 'tab:blue')
+                        
+                        # These time labels are hard-coded
                         ax[i,j].text(3e-17,6e23,r'$\delta t\, \gtrsim \, 1~{\rm yr}~\uparrow$',rotation = 38, fontsize = 25, color = 'tab:red',bbox=dict(facecolor='white', alpha = 1, edgecolor='tab:red',boxstyle='round,pad=.1'))
                         ax[i,j].text(6e-16,5e23,r'$\delta t\, \gtrsim \, 1~{\rm day}~\uparrow$',rotation = 38, fontsize = 25, color = 'tab:purple',bbox=dict(facecolor='white', alpha = 1, edgecolor='tab:purple',boxstyle='round,pad=.1'))
+                        
                         if i == 1 and j==1:
                             ax[i,j].text(1e-11,1e7,r'$E_{\rm tot} = 10^{-2} M_{\odot}$'+'\n' +r'$R = 10~{\rm kpc}$'+ '\n'+r'$\,\eta_{\rm DM} = 10^{-19}/10^5$',bbox=dict(facecolor='tab:purple', alpha = 0.0,edgecolor = 'white',boxstyle='round,pad=.2'))
                             
