@@ -313,6 +313,14 @@ def annotate_plot(ax, i, j, m, dt, R, E_unc, coupling_type, filename):
                 txt = val["txt"] + '\n' + eta_DM[coupling_type]
                 ax.text(pos_x, pos_y, txt, bbox = bbox_style("white"))
         
+def plot_couplings_screened(ax, Elist, m, K_E, K_atm, R_atm, rho_atm, R_exp, rho_exp):
+    d_screen_earth = d_screenearth(Elist, m, K_E)
+    d_screen_atm = d_screen(Elist, R_atm, rho_atm, m, K_atm)
+    d_screen_exp = d_screen(Elist, R_exp, rho_exp, m, K_E)
+    ax.fill_between(Elist, d_screen_earth, 1e100, color = 'tab:blue', alpha = .05)
+    ax.plot(Elist, d_screen_atm, color = 'tab:blue', linestyle = 'dashed')
+    ax.plot(Elist, d_screen_exp, color = 'tab:blue', linestyle = 'dotted')
+    ax.plot(Elist, d_screen_earth, color = 'tab:blue', linewidth = 3)
 
 def plots(R, E, coupling_type, coupling_order):
     m_bench = 1e-21 # in eV
@@ -424,18 +432,11 @@ def plots(R, E, coupling_type, coupling_order):
                 m = mass[i][j]
                 E_unc = E_from_uncert(t)
                 axij = ax[i][j]
-                setup_axes(axij, formatter, coupling_order)
-
-                d_screen_earth = d_screenearth(Elist, m, K_E)
-                d_screen_atm = d_screen(Elist, R_atm, rho_atm, m, K_atm)
-                d_screen_exp = d_screen(Elist, R_exp, rho_exp, m, K_E)
-                axij.fill_between(Elist, d_screen_earth, 1e100, color = 'tab:blue', alpha = .05)
-                axij.plot(Elist, d_screen_atm, color = 'tab:blue', linestyle = 'dashed')
-                axij.plot(Elist, d_screen_exp, color = 'tab:blue', linestyle = 'dotted')
-                axij.plot(Elist, d_screen_earth, color = 'tab:blue', linewidth = 3)
                 
-                print(i,j,m,K_E,R_exp,rho_exp)
-                print(min(d_screenearth(Elist,m,K_E)),min(d_screen(Elist,R_exp,rho_exp,mass[i][j],K_E)))
+                setup_axes(axij, formatter, coupling_order)
+                plot_couplings_screened(axij, Elist, m, K_E, K_atm, R_atm, rho_atm, R_exp, rho_exp)
+                
+                # NOTE - QuadSPC_x, QuadSPC_y is never defined/ empty arrays
                 axij.plot(QuadSPC_x, QuadSPC_y, color='k', linewidth = 3)
                 axij.fill_between(QuadSPC_x, QuadSPC_y, 1e100, color = 'k', alpha = 0.05)
                 
@@ -451,24 +452,35 @@ def plots(R, E, coupling_type, coupling_order):
                 axij.fill_between([1e-30, m], 1e-10, 1e50, facecolor = 'none', hatch = "/", edgecolor = 'k', alpha = 0.3)
                 
                 if m > 1e-20:
-                    axij.text(m/2e2, 1e12, r'$\omega<m_{\phi}$', color = 'k', bbox=dict(facecolor='whitesmoke', alpha = 1, edgecolor='k',boxstyle='round,pad=.1'))
-
+                    pos_x = m/200
+                    pos_y = 1e12
+                    txt = r'$\omega<m_{\phi}$'
+                    bbox_style = dict(facecolor = 'whitesmoke', alpha = 1, edgecolor = 'k', boxstyle = 'round,pad=.1')
+                    axij.text(pos_x, pos_y, txt, color = 'k', bbox = bbox_style)
+                
+                ddt = d_from_delta_t(dt_1day, R, m, Elist, 30e-6, K_space)
+                axij.plot(Elist, ddt, color = colorlist[2], linewidth = 2, linestyle = '--'  )
+                
+                ddt = d_from_delta_t(dt, R, m, Elist, 30e-6, K_space)
+                axij.plot(Elist, ddt, color = colorlist[0], linewidth = 2, linestyle = '--'  )
+                
+                fillregion_x = np.array([Elist[l] for l in range(len(Elist)) if Elist[l] > E_unc])
+                
                 if R < 1e5:
-                    ax[i,j].plot(Elist, d_from_delta_t(dt_1day,R,mass[i][j],Elist,30e-6,K_space), color = colorlist[2],linewidth = 2,linestyle = '--'  )
-                    ax[i,j].plot(Elist, d_from_delta_t(dt,R,mass[i][j],Elist,30e-6,K_space), color = colorlist[0],linewidth = 2,linestyle = '--'  )
-                    fillregion_x = np.array([Elist[l] for l in range(len(Elist)) if Elist[l]>E_from_uncert(ts[i][j])])
-                    fillregion_y = [min([d_screen(fillregion_x,R_exp,rho_exp,mass[i][j],K_E)[l],d_from_delta_t(dt_1day,R,mass[i][j],fillregion_x,30e-6,K_space)[l]]) for l in range(len(fillregion_x))]
-                    ax[i,j].fill_between(fillregion_x,d_probe(fillregion_x,signalduration(Etot,mass[i][j],fillregion_x,ts[i][j],R,1)[0],eta,Etot,mass[i][j],ts[i][j],R,1),fillregion_y,where= d_probe(fillregion_x,signalduration(Etot,mass[i][j],fillregion_x,ts[i][j],R,1)[0],eta,Etot,mass[i][j],ts[i][j],R,1)< fillregion_y, color = 'tab:green',alpha = 0.3)
+                    fillregion_y = [min([d_screen(fillregion_x,R_exp,rho_exp,m,K_E)[l],d_from_delta_t(dt_1day,R,m,fillregion_x,30e-6,K_space)[l]]) for l in range(len(fillregion_x))]
+                    
+                    rho = signalduration(Etot, m, fillregion_x, t, R, 1)[0]
+                    coupling = d_probe(fillregion_x, rho, eta, Etot, m, t, R, 1)
+                    axij.fill_between(fillregion_x, coupling, fillregion_y, where = coupling < fillregion_y, color = 'tab:green',alpha = 0.3)
                 else:
-                    ax[i,j].plot(Elist, d_from_delta_t(dt_1day,R,mass[i][j],Elist,1e-6,K_space), color = colorlist[2],linewidth = 2,linestyle = '--'  )
-                    ax[i,j].plot(Elist, d_from_delta_t(dt,R,mass[i][j],Elist,1e-6,K_space), color = colorlist[0],linewidth = 2,linestyle = '--'  )
-                    ax[i,j].plot(Elist, d_from_delta_t(dt_1day,R,mass[i][j],Elist,30e-6,K_space), color = colorlist[2],linewidth = 2,linestyle = '--'  )
-                    ax[i,j].plot(Elist, d_from_delta_t(dt,R,mass[i][j],Elist,30e-6,K_space), color = colorlist[0],linewidth = 2,linestyle = '--'  )
-                    fillregion_x = np.array([Elist[l] for l in range(len(Elist)) if Elist[l]>E_from_uncert(ts[i][j])])
-                    fillregion_y = [min([d_screen(fillregion_x,R_exp,rho_exp,mass[i][j],K_E)[l],d_from_delta_t(dt_1day,R,mass[i][j],fillregion_x,1e-6,K_space)[l]]) for l in range(len(fillregion_x))]
-                    ax[i,j].fill_between(fillregion_x,d_probe(fillregion_x,signalduration(Etot,mass[i][j],fillregion_x,ts[i][j],R,1)[0],eta,Etot,mass[i][j],ts[i][j],R,1),fillregion_y,where= d_probe(fillregion_x,signalduration(Etot,mass[i][j],fillregion_x,ts[i][j],R,1)[0],eta,Etot,mass[i][j],ts[i][j],R,1)< fillregion_y, color = 'tab:green',alpha = 0.3)
-                    ax[i,j].fill_between(Elist,d_from_delta_t(dt_1day,R,mass[i][j],Elist,1e-6,K_space),d_from_delta_t(dt_1day,R,mass[i][j],Elist,30e-6,K_space),color = colorlist[2],alpha = 0.1)
-                    ax[i,j].fill_between(Elist,d_from_delta_t(dt,R,mass[i][j],Elist,1e-6,K_space),d_from_delta_t(dt,R,mass[i][j],Elist,30e-6,K_space),color = colorlist[0],alpha = 0.1)
+                    axij.plot(Elist, d_from_delta_t(dt_1day,R,m,Elist,1e-6,K_space), color = colorlist[2],linewidth = 2,linestyle = '--'  )
+                    axij.plot(Elist, d_from_delta_t(dt,R,m,Elist,1e-6,K_space), color = colorlist[0],linewidth = 2,linestyle = '--'  )
+                    
+                    fillregion_y = [min([d_screen(fillregion_x,R_exp,rho_exp,m,K_E)[l],d_from_delta_t(dt_1day,R,m,fillregion_x,1e-6,K_space)[l]]) for l in range(len(fillregion_x))]
+                    
+                    axij.fill_between(fillregion_x,d_probe(fillregion_x,signalduration(Etot,m,fillregion_x,t,R,1)[0],eta,Etot,m,t,R,1),fillregion_y,where= d_probe(fillregion_x,signalduration(Etot,m,fillregion_x,t,R,1)[0],eta,Etot,m,t,R,1)< fillregion_y, color = 'tab:green',alpha = 0.3)
+                    axij.fill_between(Elist,d_from_delta_t(dt_1day,R,m,Elist,1e-6,K_space),d_from_delta_t(dt_1day,R,m,Elist,30e-6,K_space),color = colorlist[2],alpha = 0.1)
+                    axij.fill_between(Elist,d_from_delta_t(dt,R,m,Elist,1e-6,K_space),d_from_delta_t(dt,R,m,Elist,30e-6,K_space),color = colorlist[0],alpha = 0.1)
 
                 
                 if coupling_type == 'photon': 
@@ -495,8 +507,8 @@ def plots(R, E, coupling_type, coupling_order):
 
 
                 if filename == '10Mpc_'+coupling_type+'_quad_dilatoniccoupling.pdf':
-                    ax[i,j].text(mass[i][j]*omegaoverm_noscreen(dt,R)/4,1e16,r'$\delta t\, \gtrsim \, 1~{\rm yr}~ \uparrow $',rotation = 90, fontsize = 25, color = 'tab:red',bbox=dict(facecolor='white', alpha = 1, edgecolor='tab:red',boxstyle='round,pad=.1'))
-                    ax[i,j].text(mass[i][j]*omegaoverm_noscreen(dt_1day,R)/4,1e16,r'$\delta t\, \gtrsim \, 1~{\rm day}~ \uparrow$',rotation = 90, fontsize = 25, color = 'tab:purple',bbox=dict(facecolor='white', alpha = 1, edgecolor='tab:purple',boxstyle='round,pad=.1'))
+                    ax[i,j].text(m*omegaoverm_noscreen(dt,R)/4,1e16,r'$\delta t\, \gtrsim \, 1~{\rm yr}~ \uparrow $',rotation = 90, fontsize = 25, color = 'tab:red',bbox=dict(facecolor='white', alpha = 1, edgecolor='tab:red',boxstyle='round,pad=.1'))
+                    ax[i,j].text(m*omegaoverm_noscreen(dt_1day,R)/4,1e16,r'$\delta t\, \gtrsim \, 1~{\rm day}~ \uparrow$',rotation = 90, fontsize = 25, color = 'tab:purple',bbox=dict(facecolor='white', alpha = 1, edgecolor='tab:purple',boxstyle='round,pad=.1'))
                     if coupling_type == 'photon':
                         ax[i,j].text(3e-13,2e12/K_E,r'$d_{e,{\rm crit}}^{(2)\, \rm\oplus}$', fontsize =35, color = 'tab:blue')
                         ax[i,j].text(1e-12,5e21/K_atm,r'$d_{e,{\rm crit}}^{(2)\, \rm atm}$', fontsize =35, color = 'tab:blue')
