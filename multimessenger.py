@@ -445,6 +445,26 @@ def plot_supernova(ax, Elist, coupling_type):
         ax.plot(Elist, config["line"], color = 'gray', linewidth = 3)
         ax.fill_between(Elist, config["line"], 1e100, color = 'gray', alpha = 0.1)
 
+def plot_omega_over_m(ax, m, dt, R):
+    bbox_style = lambda color: dict(facecolor='white', 
+                      alpha = 1, 
+                      edgecolor=color, 
+                      boxstyle='round,pad=.1')
+    
+    omega_over_m_dt = omegaoverm_noscreen(dt, R)
+    pos_x = m*omega_over_m_dt/4
+    pos_y = 1e16
+    txt = r'$\delta t\, \gtrsim \, 1~{\rm yr}~ \uparrow $'
+    txt_color = "tab:red"
+    ax.text(pos_x, pos_y, txt, rotation = 90, fontsize = 25, color = txt_color, bbox = bbox_style(txt_color))
+                    
+    omega_over_m_day = omegaoverm_noscreen(DAY_TO_SEC, R)
+    pos_x = m*omega_over_m_day/4
+    pos_y = 1e16
+    txt = r'$\delta t\, \gtrsim \, 1~{\rm day}~ \uparrow$'
+    txt_color = "tab:purple"
+    ax.text(pos_x, pos_y, txt, rotation = 90, fontsize = 25, color = txt_color, bbox = bbox_style(txt_color))
+
 def plots(R, Etot, coupling_type, coupling_order):
     m_bench = 1e-21 # in eV
     m_bench2 = 1e-18
@@ -560,8 +580,8 @@ def plots(R, Etot, coupling_type, coupling_order):
                 plot_supernova(axij, Elist, coupling_type)
 
                 if filename == '10Mpc_'+coupling_type+'_quad_dilatoniccoupling.pdf':
-                    ax[i,j].text(m*omegaoverm_noscreen(dt,R)/4,1e16,r'$\delta t\, \gtrsim \, 1~{\rm yr}~ \uparrow $',rotation = 90, fontsize = 25, color = 'tab:red',bbox=dict(facecolor='white', alpha = 1, edgecolor='tab:red',boxstyle='round,pad=.1'))
-                    ax[i,j].text(m*omegaoverm_noscreen(DAY_TO_SEC,R)/4,1e16,r'$\delta t\, \gtrsim \, 1~{\rm day}~ \uparrow$',rotation = 90, fontsize = 25, color = 'tab:purple',bbox=dict(facecolor='white', alpha = 1, edgecolor='tab:purple',boxstyle='round,pad=.1'))
+                    plot_omega_over_m(axij, m, dt, R)
+                    
                     if coupling_type == 'photon':
                         ax[i,j].text(3e-13,2e12/K_E,r'$d_{e,{\rm crit}}^{(2)\, \rm\oplus}$', fontsize =35, color = 'tab:blue')
                         ax[i,j].text(1e-12,5e21/K_atm,r'$d_{e,{\rm crit}}^{(2)\, \rm atm}$', fontsize =35, color = 'tab:blue')
