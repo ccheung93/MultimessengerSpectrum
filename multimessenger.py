@@ -467,6 +467,21 @@ def quad_plot(ax, i, j, Etot, m, Elist, t, R, eta, dt, E_unc, m_bench, wmp_conto
     if R < 1e5:
         ddt_day = d2_from_delta_t(DAY_TO_SEC, R, m, fillregion_x, 30e-6, K_space)
         fillregion_y = np.minimum(d_exp, ddt_day)
+        
+        dt_lbl_yr = r'$\delta t\, \gtrsim \, 1~{\rm yr}~\uparrow$'
+        dt_lbl_day = r'$\delta t\, \gtrsim \, 1~{\rm day}~\uparrow$'
+        color_yr = 'tab:red'
+        color_day = 'tab:purple'
+        if coupling_type == 'photon':
+            add_label(ax, 3e-17, 1e27, dt_lbl_yr, rotation=37, color=color_yr, edgecolor=color_yr)
+            add_label(ax, 6e-16, 9e26, dt_lbl_day, rotation=37, color=color_day, edgecolor=color_day)
+        elif coupling_type == 'electron':
+            add_label(ax, 3e-17, 8.5e26, dt_lbl_yr, rotation=39, color=color_yr, edgecolor=color_yr)
+            add_label(ax, 6e-16, 8e26, dt_lbl_day, rotation=39, color=color_day, edgecolor=color_day)
+        elif coupling_type == 'gluon':
+            ax.set_ylim(.5e5,8e30)
+            add_label(ax, 3e-17, 6e23, dt_lbl_yr, rotation=38, color=color_yr, edgecolor=color_yr)
+            add_label(ax, 6e-16, 5e23, dt_lbl_day, rotation=38, color=color_day, edgecolor=color_day)
     else:
         Dg = 1e-6
         dday = d2_from_delta_t(DAY_TO_SEC, R, m, Elist, Dg, K_space)
@@ -482,30 +497,12 @@ def quad_plot(ax, i, j, Etot, m, Elist, t, R, eta, dt, E_unc, m_bench, wmp_conto
         ddt30 = d2_from_delta_t(dt, R, m, Elist, 30e-6, K_space)
         plot_fill_region_quad(ax, Elist, ddt_day1, ddt_day30, ddt1, ddt30)
         
-    plot_fill_region(ax, fillregion_x, fillregion_y, coupling)
-    plot_parameter_list(ax, i, j, coupling_type, 'quad', filename)
-    
-    if filename == '10Mpc_'+coupling_type+'_quad_dilatoniccoupling.pdf':
         omega_over_m_dt = omegaoverm_noscreen(dt, R)
         omega_over_m_day = omegaoverm_noscreen(DAY_TO_SEC, R)
         plot_time_labels(ax, m, omega_over_m_dt, omega_over_m_day, 'quad')
-
-    if filename == '10kpc_'+coupling_type+'_quad_dilatoniccoupling.pdf':
-        dt_lbl_yr = r'$\delta t\, \gtrsim \, 1~{\rm yr}~\uparrow$'
-        dt_lbl_day = r'$\delta t\, \gtrsim \, 1~{\rm day}~\uparrow$'
-        color_yr = 'tab:red'
-        color_day = 'tab:purple'
-        if coupling_type == 'photon':
-            add_label(ax, 3e-17, 1e27, dt_lbl_yr, rotation=37, color=color_yr, edgecolor=color_yr)
-            add_label(ax, 6e-16, 9e26, dt_lbl_day, rotation=37, color=color_day, edgecolor=color_day)
-        elif coupling_type == 'electron':
-            add_label(ax, 3e-17, 8.5e26, dt_lbl_yr, rotation=39, color=color_yr, edgecolor=color_yr)
-            add_label(ax, 6e-16, 8e26, dt_lbl_day, rotation=39, color=color_day, edgecolor=color_day)
-        elif coupling_type == 'gluon':
-            ax.set_ylim(.5e5,8e30)
-            add_label(ax, 3e-17, 6e23, dt_lbl_yr, rotation=38, color=color_yr, edgecolor=color_yr)
-            add_label(ax, 6e-16, 5e23, dt_lbl_day, rotation=38, color=color_day, edgecolor=color_day)
-
+        
+    plot_fill_region(ax, fillregion_x, fillregion_y, coupling)
+    plot_parameter_list(ax, i, j, coupling_type, 'quad', filename)
 
 def plots(R, Etot, coupling_type, coupling_order):
     """Generate dilatonic coupling plots 
