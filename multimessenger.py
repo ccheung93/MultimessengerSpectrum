@@ -568,6 +568,15 @@ def plot_critical_screening(ax, K_E, K_atm, coupling_type, filename):
             ax.text(*pos["atm"], lbl["atm"], fontsize = 35, color = 'tab:blue')
             ax.text(*pos["exp"], lbl["exp"], fontsize = 35, color = 'tab:blue')
 
+def load_external_limits(filename):
+    x, y = [], []
+    with open(filename, 'r') as f:
+        for line in f:
+            values = line.strip().split()
+            x.append(float(values[0]))
+            y.append(float(values[1]))
+    
+    return x, y
 
 def plots(R, Etot, coupling_type, coupling_order):
     m_bench = 1e-21 # in eV
@@ -611,27 +620,16 @@ def plots(R, Etot, coupling_type, coupling_order):
     R_exp = 1e0* 5.07e6
     rho_exp = 5.5 * GCM3_TO_EV4
 
-    # Initialize arrays
-    Microscope_x, Microscope_y = [], []
-    EotWashEP_x, EotWashEP_y = [], []
-    FifthForce_x, FifthForce_y = [], []
-
-    with open('Linear Scalar Photon/MICROSCOPE.txt', 'r') as f:
-        for line in f:
-            Microscope_x.append([float(value) for value in line.strip().split()][0])
-            Microscope_y.append([float(value) for value in line.strip().split()][1])
-
-    with open('Linear Scalar Photon/EotWashEP.txt', 'r') as f:
-        for line in f:
-            EotWashEP_x.append([float(value) for value in line.strip().split()][0])
-            EotWashEP_y.append([float(value) for value in line.strip().split()][1])
-
-    with open('Linear Scalar Photon/FifthForce.txt', 'r') as f:
-        for line in f:
-            FifthForce_x.append([float(value) for value in line.strip().split()][0])
-            FifthForce_y.append([float(value) for value in line.strip().split()][1])
-
+    # Load MICROSCOPE limits
+    Microscope_x, Microscope_y = load_external_limits('Linear Scalar Photon/MICROSCOPE.txt')
     Microscope_m = [Microscope_y[0] for i in range(len(Elist))]
+    
+    # Load EotWashEP limits
+    EotWashEP_x, EotWashEP_y = load_external_limits('Linear Scalar Photon/EotWashEP.txt')
+    EotWashEP_m = [EotWashEP_y[0] for i in range(len(Elist))]
+
+    # Load FifthForce limits
+    FifthForce_x, FifthForce_y = load_external_limits('Linear Scalar Photon/FifthForce.txt')
     FifthForce_m = [FifthForce_y[0] for i in range(len(Elist))]
 
     if coupling_order == 'linear':    
