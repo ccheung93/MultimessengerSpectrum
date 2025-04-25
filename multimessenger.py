@@ -89,36 +89,27 @@ def signal_duration(Etot, mass, energies, burst_duration, distance_pc, aw, integ
     
     return rho, rescaling_factor
 
-def d1_probe(w, rho, coherence, eta):
-    """ Calculate value of linear dilatonic coupling we can probe
+def d_probe(w, rho, coherence, eta, order):
+    """ Calculate value of dilatonic coupling we can probe
 
     Args:
         w (float): energy of phi emitted by the source
         rho (float): density of phi at the Earth
         coherence (array of floats): coherence times
         eta (float): fractional sensitivity of coupling_type to dark matter signal
+        order (int): coupling order
 
     Returns:
-        float: value of linear dilatonic coupling we can probe
+        float: value of dilatonic coupling we can probe
     """
-    phi = np.sqrt(rho)/(2*w)
-    d = eta*PLANCK_MASS_EV/(2*np.sqrt(PI)*phi) * coherence
-    return d
-
-def d2_probe(w, rho, coherence, eta): 
-    """ Calculate value of quadratic dilatonic coupling we can probe
-    
-    Args:
-        w (float): energy of phi emitted by the source
-        rho (float): density of phi at the Earth
-        coherence (array of floats): coherence times
-        eta (float): fractional sensitivity of coupling_type to dark matter signal
-        
-    Returns:
-        float: value of quadratic dilatonic coupling we can probe
-    """
-    phi = np.sqrt(2*rho)/w
-    d = eta*PLANCK_MASS_EV**2/(4*PI*phi**2) * coherence
+    if order == 1:
+        phi = np.sqrt(rho)/(2*w)
+        d = eta*PLANCK_MASS_EV/(2*np.sqrt(PI)*phi) * coherence
+    elif order == 2:
+        phi = np.sqrt(2*rho)/w
+        d = eta*PLANCK_MASS_EV**2/(4*PI*phi**2) * coherence
+    else:
+        raise ValueError(f"Unsupported coupling order: {order}")
     return d
 
 def d_from_Lambda(Lambda, order): 
@@ -324,13 +315,13 @@ def plot_fill_region(ax, Elist, Microscope_m, t, m, R, eta, Etot, E_unc):
     fillregion_y = [Microscope_m[l] for l in range(len(fillregion_x))]
     
     rho, coherence = signal_duration(Etot, m, fillregion_x, t, R, 1)
-    coupling = d1_probe(fillregion_x, rho, coherence, eta)
+    coupling = d_probe(fillregion_x, rho, coherence, eta, 1)
     ax.fill_between(fillregion_x, coupling, fillregion_y, where = coupling < fillregion_y, color = 'tab:green',alpha = 0.3)
 
 def plot_fill_region_quad(ax, Elist, t, m, R, eta, dt, Etot, E_unc, R_exp, rho_exp, K_E, K_space):
     fillregion_x = Elist[Elist > E_unc]
     rho, coherence = signal_duration(Etot, m, fillregion_x, t, R, 1)
-    coupling = d2_probe(fillregion_x, rho, coherence, eta)
+    coupling = d_probe(fillregion_x, rho, coherence, eta, 2)
     d_exp = d2_screen(fillregion_x, R_exp, rho_exp, m, K_E)
     
     if R < 1e5:
@@ -683,7 +674,7 @@ def plots(R, Etot, coupling_type, coupling_order):
                 axij = ax[i][j]
                 
                 rho, coherence = signal_duration(Etot, m, Elist, t, R, 1)
-                coupling = d1_probe(Elist, rho, coherence, eta)
+                coupling = d_probe(Elist, rho, coherence, eta, 1)
                 
                 setup_axes(axij, formatter, coupling_order)
                 plot_MICROSCOPE(axij, Elist, Microscope_m)
@@ -709,7 +700,7 @@ def plots(R, Etot, coupling_type, coupling_order):
                 axij = ax[i][j]
                 
                 rho, coherence = signal_duration(Etot, m, Elist, t, R, 1)
-                coupling = d2_probe(Elist, rho, coherence, eta)
+                coupling = d_probe(Elist, rho, coherence, eta, 2)
                 
                 d_screen_earth = d2_screen(Elist, R_E, rho_E, m, K_E)
                 d_screen_atm = d2_screen(Elist, R_atm, rho_atm, m, K_atm)
