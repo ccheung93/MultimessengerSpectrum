@@ -32,7 +32,7 @@ def signal_duration(Etot, mass, energies, burst_duration, distance_pc, aw, integ
         mass (float): mass of phi field [eV]
         energies (array_like): array of individual particle energies [eV]
         burst_duration (float): t_star, the duration of the burst emission at the source [s]
-        distance_pc (float): distance between source and detector [parsecs]
+        distance_pc (float): distance between source and detector [pc]
         aw (float): wavepacket uncertainty parameter based on uncertainty principle:
                     dw * t_star >= 1, where dw = spread in energies and t_star = burst_duration
                     for a given wavepacket, aw = dw * t_star, where aw >= 1
@@ -121,23 +121,46 @@ def d2_probe(w, rho, coherence, eta):
     d = eta*PLANCK_MASS_EV**2/(4*PI*phi**2) * coherence
     return d
 
-def d_from_Lambda(Lambda): #For supernova constraint
+def d2_from_Lambda(Lambda): #For supernova constraint
     d = (1/(4*PI))*(PLANCK_MASS_EV/Lambda)**2
     return d
 
-def d_from_delta_t(dt, L, m, E, Dg, K):
-    rho_ISM = 1.67e-24 * K * GCM3_TO_EV4 #density in g/cm^3 times the expectation value of the operator in normal matter times conversion to eV^4
-    rho_IGM = 1.67e-30 * K * GCM3_TO_EV4   
-    ng = 0.006e9 * (L**3)/(GPC_TO_PC**3)#1e6 #galaxies/Gpc^3
+def d2_from_delta_t(dt, L, m, E, Dg, K):
+    """ Calculate value of quadratic dilatonic coupling from a time delay 
+        (calculates d_i^(2) from Eq.39 in arXiv:2502.08716v1)
     
-    k1 = np.array([((2*E[i]**2*(dt*SPEED_OF_LIGHT))/(L*PC_TO_METERS)) - m**2 for i in range(len(E))])
-    k2 = PLANCK_MASS_EV**2/(2*4*PI)
+    Args:
+        dt (float): time delay [s]
+        L (float): propagation distance [pc]
+        m (float): mass of phi [eV]
+        E (array of floats): energies [eV]
+        Dg (float): distance per galaxy of signal propagation [pc]
+        K (float): expectation value of the operator in normal matter?
+        
+    Returns:
+        float: value of quadratic dilatonic coupling from a time delay
+    """
+    # Densities of ISM and IGM in eV^4, what is K for?
+    rho_ISM = 1.67e-24 * GCM3_TO_EV4
+    rho_IGM = 1.67e-30 * GCM3_TO_EV4
+    
+    # Galaxy number density [galaxies / Gpc^3]
+    ng = 0.006e9 * (L**3)/(GPC_TO_PC**3)
+    
+    prefactor = PLANCK_MASS_EV**2/(8*PI)
+    L_meters = L * PC_TO_METERS
+    dt_c = dt * SPEED_OF_LIGHT
+    
     if L < 1e5:
-        d = np.array([(((E[i]**2)*(1 - (1/((dt*SPEED_OF_LIGHT)/(L*PC_TO_METERS) + 1)**2)) - m**2)/(8*PI*rho_ISM))*(PLANCK_MASS_EV**2) for i in range(len(E))])
+        d = np.array([
+            (((E[i]**2)*(1 - (1/(dt_c/L_meters + 1)**2)) - m**2)/(8*PI*rho_ISM*K))*(PLANCK_MASS_EV**2) for i in range(len(E))
+        ])
     else:
-        k1 = np.array([((2*E[i]**2*(dt*SPEED_OF_LIGHT))/(L*PC_TO_METERS)) - m**2 for i in range(len(E))])
-        k3 = 1/((ng**(1/3) + 1)*Dg*rho_ISM + (1-(ng**(1/3)+1)*Dg)*rho_IGM)
-        d = k3*k2*k1
+        k1 = np.array([
+            ((2*E[i]**2*dt_c)/L_meters) - m**2 for i in range(len(E))
+        ])
+        k3 = 1/((ng**(1/3) + 1)*Dg*rho_ISM*K + (1-(ng**(1/3)+1)*Dg)*rho_IGM*K)
+        d = prefactor*k3*k1
     return d
 
 def omegaoverm_noscreen(dt, L):
@@ -157,16 +180,9 @@ def omegaoverm_noscreen(dt, L):
     dt = dt*SPEED_OF_LIGHT
     return (L+dt)/(np.sqrt(dt * (2*L+dt)))
 
-def d_screenearth(E, m, K): #Probably don't need this or the next for the ALP, but left it here just in case.
-    rho_op_ex = 1e-3
-    rho_E = 5.5 * rho_op_ex * GCM3_TO_EV4
-    R = 6.371e6 * 5.07e6
-    d = [((PLANCK_MASS_EV**2)/(2*4*PI*rho_E*K))*((1/(2*R)**2) + E[i]**2-m**2) for i in range(len(E))]
-    return d
-
-
-def d_screen(E, R, rho, m, K):
-    d = [((PLANCK_MASS_EV**2)/(2*4*PI*rho*K))*((1/R**2) + E[i]**2-m**2) for i in range(len(E))]
+def d2_screen(E, R, rho, m, K):
+    """ Calculate the critical coupling"""
+    d = PLANCK_MASS_EV**2 / (8*PI*rho*K) * (1/R**2 + E**2 - m**2)
     return d
 
 def E_from_uncert(t_star):
@@ -275,10 +291,10 @@ def plot_coupling(ax, Elist, t, m, R, eta, Etot, m_bench, wmp_contour, coupling_
     ax.fill_between([1e-30, m], min_y, 1e50, facecolor = 'none', hatch = "/", edgecolor = 'k', alpha = 0.3)
 
 def plot_d_from_delta_t(ax, Elist, m, R, dt, Dg, K_space):
-    d = d_from_delta_t(DAY_TO_SEC, R, m, Elist, Dg, K_space)
+    d = d2_from_delta_t(DAY_TO_SEC, R, m, Elist, Dg, K_space)
     ax.plot(Elist, d, color = COLORLIST[2], linewidth = 2, linestyle = '--'  )
     
-    d = d_from_delta_t(dt, R, m, Elist, Dg, K_space)
+    d = d2_from_delta_t(dt, R, m, Elist, Dg, K_space)
     ax.plot(Elist, d, color = COLORLIST[0], linewidth = 2, linestyle = '--'  )
 
 def plot_fill_region(ax, Elist, Microscope_m, t, m, R, eta, Etot, E_unc):    
@@ -294,25 +310,25 @@ def plot_fill_region_quad(ax, Elist, t, m, R, eta, dt, Etot, E_unc, R_exp, rho_e
     fillregion_x = Elist[Elist > E_unc]
     rho, coherence = signal_duration(Etot, m, fillregion_x, t, R, 1)
     coupling = d2_probe(fillregion_x, rho, coherence, eta)
-    d_exp = d_screen(fillregion_x, R_exp, rho_exp, m, K_E)
+    d_exp = d2_screen(fillregion_x, R_exp, rho_exp, m, K_E)
     
     if R < 1e5:
-        ddt_day = d_from_delta_t(DAY_TO_SEC, R, m, fillregion_x, 30e-6, K_space)
+        ddt_day = d2_from_delta_t(DAY_TO_SEC, R, m, fillregion_x, 30e-6, K_space)
         fillregion_y = np.minimum(d_exp, ddt_day)
 
         ax.fill_between(fillregion_x, coupling, fillregion_y, where = coupling < fillregion_y, color = 'tab:green', alpha = 0.3)
     else:
         plot_d_from_delta_t(ax, Elist, m, R, dt, 1e-6, K_space)
         
-        ddt_day_fill = d_from_delta_t(DAY_TO_SEC, R, m, fillregion_x, 1e-6, K_space)
+        ddt_day_fill = d2_from_delta_t(DAY_TO_SEC, R, m, fillregion_x, 1e-6, K_space)
         fillregion_y = np.minimum(d_exp, ddt_day_fill)
         
         ax.fill_between(fillregion_x, coupling, fillregion_y, where = coupling < fillregion_y, color = 'tab:green', alpha = 0.3)
         
-        ddt_day1 = d_from_delta_t(DAY_TO_SEC, R, m, Elist, 1e-6, K_space)
-        ddt1 = d_from_delta_t(dt, R, m, Elist, 1e-6, K_space)
-        ddt_day30 = d_from_delta_t(DAY_TO_SEC, R, m, Elist, 30e-6, K_space)
-        ddt30 = d_from_delta_t(dt, R, m, Elist, 30e-6, K_space)
+        ddt_day1 = d2_from_delta_t(DAY_TO_SEC, R, m, Elist, 1e-6, K_space)
+        ddt1 = d2_from_delta_t(dt, R, m, Elist, 1e-6, K_space)
+        ddt_day30 = d2_from_delta_t(DAY_TO_SEC, R, m, Elist, 30e-6, K_space)
+        ddt30 = d2_from_delta_t(dt, R, m, Elist, 30e-6, K_space)
         ax.fill_between(Elist, ddt_day1, ddt_day30, color = COLORLIST[2], alpha = 0.1)
         ax.fill_between(Elist, ddt1, ddt30, color = COLORLIST[0], alpha = 0.1)
 
@@ -379,21 +395,21 @@ def plot_supernova(ax, Elist, coupling_type):
             "txt_y": 3e29,
             "lbl_y": 3e31,
             "txt": r'${\rm Supernova}~\gamma \gamma \rightarrow \phi \phi$',
-            "line": [d_from_Lambda(1e12)] * len(Elist)
+            "line": [d2_from_Lambda(1e12)] * len(Elist)
         },
         "electron": {
             "ylim": (.5e9, 5e33),
             "txt_y": 3e29,
             "lbl_y": 1e32,
             "txt": r'${\rm Supernova}~e^+ e^- \rightarrow \phi \phi$',
-            "line": [5e31] * len(Elist) # NOTE - should this be d_from_Lambda(5e31)?
+            "line": [5e31] * len(Elist)
         },
         "gluon": {
             "ylim": (.5e4, 5e30),
             "txt_y": 3e26,
             "lbl_y": 3e29,
             "txt": r'${\rm Supernova}~N N \rightarrow N N \phi \phi$',
-            "line": [d_from_Lambda(15e12)] * len(Elist)
+            "line": [d2_from_Lambda(15e12)] * len(Elist)
         }
     }
     
@@ -605,17 +621,14 @@ def plots(R, Etot, coupling_type, coupling_order):
     formatter = FuncFormatter(exponentlabel) # customize tick labels on axes to be in log10
 
     dt = 1 * 3.154e7 #year
-    dt_100 = 100 * 3.154e7
     Elist = mass[0][0]*wmp_contour
-    labels = [r'$\mathcal{E}_{\phi}= 10^5~m_{\phi}$',r'$\mathcal{E}_{\phi}= 10^7~m_{\phi}$']
-    Lambda_earth_screen = [1e22 for i in range(len(Elist))] 
-    d_earth_screen = [d_from_Lambda(1e22) for i in range(len(Elist))] 
-
-    rho_E = 5.5 * K_E * GCM3_TO_EV4        
+    
+    rho_E = 5.5 * GCM3_TO_EV4
+    R_E = 6.371e6 * 5.07e6
     R_atm = 1e4* 5.07e6
-    rho_atm = 1e-3 * K_atm * GCM3_TO_EV4 
+    rho_atm = 1e-3 * GCM3_TO_EV4
     R_exp = 1e0* 5.07e6
-    rho_exp = 5.5 * K_E * GCM3_TO_EV4 
+    rho_exp = 5.5 * GCM3_TO_EV4
 
     # Initialize arrays
     Microscope_x, Microscope_y = [], []
@@ -639,14 +652,6 @@ def plots(R, Etot, coupling_type, coupling_order):
 
     Microscope_m = [Microscope_y[0] for i in range(len(Elist))]
     FifthForce_m = [FifthForce_y[0] for i in range(len(Elist))]
-
-    rho_op_ex = 6.3e-4
-    rho_E = 5.5 * rho_op_ex * GCM3_TO_EV4        
-    R_atm = 1e4* 5.07e6
-    rho_atm = 1e-3 * rho_op_ex * GCM3_TO_EV4 
-    R_exp = 1e0* 5.07e6
-    rho_exp = 5.5 * rho_op_ex * GCM3_TO_EV4 
-    rho_ISM = 1.64*1.67e-24 * GCM3_TO_EV4
 
     if coupling_order == 'linear':    
         for i in range(2):
@@ -679,9 +684,9 @@ def plots(R, Etot, coupling_type, coupling_order):
                 E_unc = E_from_uncert(t)
                 axij = ax[i][j]
                 
-                d_screen_earth = d_screenearth(Elist, m, K_E)
-                d_screen_atm = d_screen(Elist, R_atm, rho_atm, m, K_atm)
-                d_screen_exp = d_screen(Elist, R_exp, rho_exp, m, K_E)
+                d_screen_earth = d2_screen(Elist, R_E, rho_E, m, K_E)
+                d_screen_atm = d2_screen(Elist, R_atm, rho_atm, m, K_atm)
+                d_screen_exp = d2_screen(Elist, R_exp, rho_exp, m, K_E)
                 setup_axes(axij, formatter, coupling_order)
                 
                 plot_couplings_screened(axij, Elist, d_screen_earth, d_screen_exp, d_screen_atm)
@@ -734,12 +739,20 @@ if __name__ == "__main__":
     coupling_orders = ['linear','quad']
     
     # Extragalactic
-    R_EG = 1e7
-    E_EG = 1
+    R_EG = 1e7 # pc
+    E_EG = 1   # solar-masses
     
     # Galactic
     R_GC = 1e4
     E_GC = 1e-2
+    
+    # computations
+    # Inputs:
+    #   density profile
+    #   spectrum emitted by source, e.g. momentum spectrum
+    #   experimental properties, e.g. sensitivity, t_int
+    
+    # plot
     
     start_time = time.time()
     for i in coupling_types:
