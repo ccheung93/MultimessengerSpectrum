@@ -115,7 +115,8 @@ def plot_d_from_delta_t(ax, Elist, dday, ddt):
     ax.plot(Elist, dday, color = COLORLIST[2], linewidth = 2, linestyle = '--'  )
     ax.plot(Elist, ddt, color = COLORLIST[0], linewidth = 2, linestyle = '--'  )
 
-def plot_fill_region(ax, fillregion_x, fillregion_y, coupling):    
+def plot_fill_region(ax, fillregion_x, fillregion_y, coupling):
+    """ Shade the region between the curves fillregion_y and coupling over the x-axis values in fillregion_x where coupling < fillregion_y """
     ax.fill_between(fillregion_x, coupling, fillregion_y, where = coupling < fillregion_y, color = 'tab:green',alpha = 0.3)
 
 def plot_fill_region_quad(ax, Elist, ddt_day1, ddt_day30, ddt1, ddt30):
@@ -384,6 +385,102 @@ def load_linear_constraints(Elist):
     
     return Microscope_m, FifthForce_m
 
+def linear_plot(ax, i, j, Etot, m, Elist, t, R, eta, dt, Microscope_m, FifthForce_m, E_unc, m_bench, wmp_contour, K_space, coupling_type, filename):
+    """ Plots for linear coupling_order """
+    rho, coherence = signal_duration(Etot, m, Elist, t, R, 1)
+    coupling = d_probe(Elist, rho, coherence, eta, 1)
+
+    plot_MICROSCOPE(ax, Elist, Microscope_m)
+    plot_FifthForce(ax, t, Elist, E_unc, FifthForce_m)
+    plot_coupling(ax, m, coupling, m_bench, wmp_contour, 'linear')
+    label_omega_lt_mass(ax, m, 'linear')
+    
+    fillregion_x = Elist[(Elist > E_unc) & (Elist > m * omegaoverm_noscreen(DAY_TO_SEC, R))]
+    fillregion_y = [Microscope_m[l] for l in range(len(fillregion_x))]
+    
+    rho, coherence = signal_duration(Etot, m, fillregion_x, t, R, 1)
+    coupling_fill = d_probe(fillregion_x, rho, coherence, eta, 1)
+    plot_fill_region(ax, fillregion_x, fillregion_y, coupling_fill)
+    
+    Dg = 30e-6
+    dday = d2_from_delta_t(DAY_TO_SEC, R, m, Elist, Dg, K_space)
+    ddt = d2_from_delta_t(dt, R, m, Elist, Dg, K_space)
+    plot_d_from_delta_t(ax, Elist, dday, ddt)
+    
+    plot_time_labels(ax, m, omegaoverm_noscreen(dt, R), omegaoverm_noscreen(DAY_TO_SEC, R), 'linear')
+    plot_omega_ts(ax, E_unc, filename)
+    plot_parameter_list(ax, i, j, coupling_type, 'linear', filename)
+
+def quad_plot(ax, i, j, Etot, m, Elist, t, R, eta, dt, E_unc, m_bench, wmp_contour, K_E, K_atm, K_space, coupling_type, filename):
+    """ Plots for quadratic coupling_order """
+    rho, coherence = signal_duration(Etot, m, Elist, t, R, 1)
+    coupling = d_probe(Elist, rho, coherence, eta, 2)
+    
+    d_screen_earth = d2_screen(Elist, R_E, RHO_E, m, K_E)
+    d_screen_atm = d2_screen(Elist, R_ATM, RHO_ATM, m, K_atm)
+    d_screen_exp = d2_screen(Elist, R_EXP, RHO_EXP, m, K_E)
+    
+    plot_couplings_screened(ax, Elist, d_screen_earth, d_screen_exp, d_screen_atm)
+    plot_E_unc(ax, E_unc)
+    plot_coupling(ax, m, coupling, m_bench, wmp_contour, 'quad')
+    label_omega_lt_mass(ax, m, 'quad')
+    
+    Dg = 30e-6
+    dday = d2_from_delta_t(DAY_TO_SEC, R, m, Elist, Dg, K_space)
+    ddt = d2_from_delta_t(dt, R, m, Elist, Dg, K_space)
+    plot_d_from_delta_t(ax, Elist, dday, ddt)
+    
+    fillregion_x = Elist[Elist > E_unc]
+    rho, coherence = signal_duration(Etot, m, fillregion_x, t, R, 1)
+    coupling = d_probe(fillregion_x, rho, coherence, eta, 2)
+    d_exp = d2_screen(fillregion_x, R_EXP, RHO_EXP, m, K_E)
+    
+    plot_supernova(ax, Elist, coupling_type)
+    plot_critical_screening(ax, K_E, K_atm, coupling_type, filename)
+    
+    if R < 1e5:
+        ddt_day = d2_from_delta_t(DAY_TO_SEC, R, m, fillregion_x, 30e-6, K_space)
+        fillregion_y = np.minimum(d_exp, ddt_day)
+    else:
+        Dg = 1e-6
+        dday = d2_from_delta_t(DAY_TO_SEC, R, m, Elist, Dg, K_space)
+        ddt = d2_from_delta_t(dt, R, m, Elist, Dg, K_space)
+        plot_d_from_delta_t(ax, Elist, dday, ddt)
+    
+        ddt_day_fill = d2_from_delta_t(DAY_TO_SEC, R, m, fillregion_x, 1e-6, K_space)
+        fillregion_y = np.minimum(d_exp, ddt_day_fill)
+        ddt_day1 = d2_from_delta_t(DAY_TO_SEC, R, m, Elist, 1e-6, K_space)
+        ddt1 = d2_from_delta_t(dt, R, m, Elist, 1e-6, K_space)
+        ddt_day30 = d2_from_delta_t(DAY_TO_SEC, R, m, Elist, 30e-6, K_space)
+        ddt30 = d2_from_delta_t(dt, R, m, Elist, 30e-6, K_space)
+        plot_fill_region_quad(ax, Elist, ddt_day1, ddt_day30, ddt1, ddt30)
+        
+    plot_fill_region(ax, fillregion_x, fillregion_y, coupling)
+
+    plot_parameter_list(ax, i, j, coupling_type, 'quad', filename)
+    if filename == '10Mpc_'+coupling_type+'_quad_dilatoniccoupling.pdf':
+        omega_over_m_dt = omegaoverm_noscreen(dt, R)
+        omega_over_m_day = omegaoverm_noscreen(DAY_TO_SEC, R)
+        plot_time_labels(ax, m, omega_over_m_dt, omega_over_m_day, 'quad')
+
+    if filename == '10kpc_'+coupling_type+'_quad_dilatoniccoupling.pdf':
+        if coupling_type == 'photon':
+            # These time labels are hard-coded
+            ax.text(3e-17,1e27,r'$\delta t\, \gtrsim \, 1~{\rm yr}~\uparrow$',rotation = 37, fontsize = 25, color = 'tab:red',bbox=dict(facecolor='white', alpha = 1, edgecolor='tab:red',boxstyle='round,pad=.1'))
+            ax.text(6e-16,9e26,r'$\delta t\, \gtrsim \, 1~{\rm day}~\uparrow$',rotation = 37, fontsize = 25, color = 'tab:purple',bbox=dict(facecolor='white', alpha = 1, edgecolor='tab:purple',boxstyle='round,pad=.1'))
+
+        elif coupling_type == 'electron':
+            # These time labels are hard-coded
+            ax.text(3e-17,8.5e26,r'$\delta t\, \gtrsim \, 1~{\rm yr}~\uparrow$',rotation = 39, fontsize = 25, color = 'tab:red',bbox=dict(facecolor='white', alpha = 1, edgecolor='tab:red',boxstyle='round,pad=.1'))
+            ax.text(6e-16,8e26,r'$\delta t\, \gtrsim \, 1~{\rm day}~\uparrow$',rotation = 39, fontsize = 25, color = 'tab:purple',bbox=dict(facecolor='white', alpha = 1, edgecolor='tab:purple',boxstyle='round,pad=.1'))
+            
+        elif coupling_type == 'gluon':
+            ax.set_ylim(.5e5,8e30)
+            
+            # These time labels are hard-coded
+            ax.text(3e-17,6e23,r'$\delta t\, \gtrsim \, 1~{\rm yr}~\uparrow$',rotation = 38, fontsize = 25, color = 'tab:red',bbox=dict(facecolor='white', alpha = 1, edgecolor='tab:red',boxstyle='round,pad=.1'))
+            ax.text(6e-16,5e23,r'$\delta t\, \gtrsim \, 1~{\rm day}~\uparrow$',rotation = 38, fontsize = 25, color = 'tab:purple',bbox=dict(facecolor='white', alpha = 1, edgecolor='tab:purple',boxstyle='round,pad=.1'))
+
 def plots(R, Etot, coupling_type, coupling_order):
     """Generate dilatonic coupling plots 
 
@@ -444,99 +541,9 @@ def plots(R, Etot, coupling_type, coupling_order):
             setup_axes(axij, formatter, coupling_order)
             
             if coupling_order == 'linear':
-                rho, coherence = signal_duration(Etot, m, Elist, t, R, 1)
-                coupling = d_probe(Elist, rho, coherence, eta, 1)
-
-                omega_over_m_dt = omegaoverm_noscreen(dt, R)
-                omega_over_m_day = omegaoverm_noscreen(DAY_TO_SEC, R)
-
-                plot_MICROSCOPE(axij, Elist, Microscope_m)
-                plot_FifthForce(axij, t, Elist, E_unc, FifthForce_m)
-                plot_coupling(axij, m, coupling, m_bench, wmp_contour, coupling_order)
-                label_omega_lt_mass(axij, m, coupling_order)
-
-                fillregion_x = np.array([Elist[l] for l in range(len(Elist)) if all([Elist[l] > E_unc, Elist[l] > m*omega_over_m_day])])
-                fillregion_y = [Microscope_m[l] for l in range(len(fillregion_x))]
-                rho, coherence = signal_duration(Etot, m, fillregion_x, t, R, 1)
-                coupling = d_probe(fillregion_x, rho, coherence, eta, 1)
-                plot_fill_region(axij, fillregion_x, fillregion_y, coupling)
-
-                Dg = 30e-6
-                dday = d2_from_delta_t(DAY_TO_SEC, R, m, Elist, Dg, K_space)
-                ddt = d2_from_delta_t(dt, R, m, Elist, Dg, K_space)
-                plot_d_from_delta_t(axij, Elist, dday, ddt)
-
-                plot_time_labels(axij, m, omega_over_m_dt, omega_over_m_day, coupling_order)
-                plot_omega_ts(axij, E_unc, filename)
-                plot_parameter_list(axij, i, j, coupling_type, coupling_order, filename)
+                linear_plot(axij, i, j, Etot, m, Elist, t, R, eta, dt, Microscope_m, FifthForce_m, E_unc, m_bench, wmp_contour, K_space, coupling_type, filename)
             elif coupling_order == 'quad':
-                rho, coherence = signal_duration(Etot, m, Elist, t, R, 1)
-                coupling = d_probe(Elist, rho, coherence, eta, 2)
-                
-                d_screen_earth = d2_screen(Elist, R_E, RHO_E, m, K_E)
-                d_screen_atm = d2_screen(Elist, R_ATM, RHO_ATM, m, K_atm)
-                d_screen_exp = d2_screen(Elist, R_EXP, RHO_EXP, m, K_E)
-                
-                plot_couplings_screened(axij, Elist, d_screen_earth, d_screen_exp, d_screen_atm)
-                plot_E_unc(axij, E_unc)
-                plot_coupling(axij, m, coupling, m_bench, wmp_contour, coupling_order)
-                label_omega_lt_mass(axij, m, coupling_order)
-                
-                Dg = 30e-6
-                dday = d2_from_delta_t(DAY_TO_SEC, R, m, Elist, Dg, K_space)
-                ddt = d2_from_delta_t(dt, R, m, Elist, Dg, K_space)
-                plot_d_from_delta_t(axij, Elist, dday, ddt)
-                
-                fillregion_x = Elist[Elist > E_unc]
-                rho, coherence = signal_duration(Etot, m, fillregion_x, t, R, 1)
-                coupling = d_probe(fillregion_x, rho, coherence, eta, 2)
-                d_exp = d2_screen(fillregion_x, R_EXP, RHO_EXP, m, K_E)
-                
-                plot_supernova(axij, Elist, coupling_type)
-                plot_critical_screening(axij, K_E, K_atm, coupling_type, filename)
-                
-                if R < 1e5:
-                    ddt_day = d2_from_delta_t(DAY_TO_SEC, R, m, fillregion_x, 30e-6, K_space)
-                    fillregion_y = np.minimum(d_exp, ddt_day)
-                else:
-                    Dg = 1e-6
-                    dday = d2_from_delta_t(DAY_TO_SEC, R, m, Elist, Dg, K_space)
-                    ddt = d2_from_delta_t(dt, R, m, Elist, Dg, K_space)
-                    plot_d_from_delta_t(axij, Elist, dday, ddt)
-        
-                    ddt_day_fill = d2_from_delta_t(DAY_TO_SEC, R, m, fillregion_x, 1e-6, K_space)
-                    fillregion_y = np.minimum(d_exp, ddt_day_fill)
-                    ddt_day1 = d2_from_delta_t(DAY_TO_SEC, R, m, Elist, 1e-6, K_space)
-                    ddt1 = d2_from_delta_t(dt, R, m, Elist, 1e-6, K_space)
-                    ddt_day30 = d2_from_delta_t(DAY_TO_SEC, R, m, Elist, 30e-6, K_space)
-                    ddt30 = d2_from_delta_t(dt, R, m, Elist, 30e-6, K_space)
-                    plot_fill_region_quad(axij, Elist, ddt_day1, ddt_day30, ddt1, ddt30)
-                    
-                plot_fill_region(axij, fillregion_x, fillregion_y, coupling)
-
-                plot_parameter_list(axij, i, j, coupling_type, coupling_order, filename)
-                if filename == '10Mpc_'+coupling_type+'_quad_dilatoniccoupling.pdf':
-                    omega_over_m_dt = omegaoverm_noscreen(dt, R)
-                    omega_over_m_day = omegaoverm_noscreen(DAY_TO_SEC, R)
-                    plot_time_labels(axij, m, omega_over_m_dt, omega_over_m_day, coupling_order)
-
-                if filename == '10kpc_'+coupling_type+'_quad_dilatoniccoupling.pdf':
-                    if coupling_type == 'photon':
-                        # These time labels are hard-coded
-                        ax[i,j].text(3e-17,1e27,r'$\delta t\, \gtrsim \, 1~{\rm yr}~\uparrow$',rotation = 37, fontsize = 25, color = 'tab:red',bbox=dict(facecolor='white', alpha = 1, edgecolor='tab:red',boxstyle='round,pad=.1'))
-                        ax[i,j].text(6e-16,9e26,r'$\delta t\, \gtrsim \, 1~{\rm day}~\uparrow$',rotation = 37, fontsize = 25, color = 'tab:purple',bbox=dict(facecolor='white', alpha = 1, edgecolor='tab:purple',boxstyle='round,pad=.1'))
-
-                    elif coupling_type == 'electron':
-                        # These time labels are hard-coded
-                        ax[i,j].text(3e-17,8.5e26,r'$\delta t\, \gtrsim \, 1~{\rm yr}~\uparrow$',rotation = 39, fontsize = 25, color = 'tab:red',bbox=dict(facecolor='white', alpha = 1, edgecolor='tab:red',boxstyle='round,pad=.1'))
-                        ax[i,j].text(6e-16,8e26,r'$\delta t\, \gtrsim \, 1~{\rm day}~\uparrow$',rotation = 39, fontsize = 25, color = 'tab:purple',bbox=dict(facecolor='white', alpha = 1, edgecolor='tab:purple',boxstyle='round,pad=.1'))
-                        
-                    elif coupling_type == 'gluon':
-                        ax[i,j].set_ylim(.5e5,8e30)
-                        
-                        # These time labels are hard-coded
-                        ax[i,j].text(3e-17,6e23,r'$\delta t\, \gtrsim \, 1~{\rm yr}~\uparrow$',rotation = 38, fontsize = 25, color = 'tab:red',bbox=dict(facecolor='white', alpha = 1, edgecolor='tab:red',boxstyle='round,pad=.1'))
-                        ax[i,j].text(6e-16,5e23,r'$\delta t\, \gtrsim \, 1~{\rm day}~\uparrow$',rotation = 38, fontsize = 25, color = 'tab:purple',bbox=dict(facecolor='white', alpha = 1, edgecolor='tab:purple',boxstyle='round,pad=.1'))
+                quad_plot(axij, i, j, Etot, m, Elist, t, R, eta, dt, E_unc, m_bench, wmp_contour, K_E, K_atm, K_space, coupling_type, filename)
 
             ax[0,j].set_title(r'$\log_{10}(m_{\phi}/{\rm eV}) = $'+str(int(np.log10(mass[0][j]))), pad = 20)
             ax[i,1].set_ylabel(r'$t_*$ = '+str(int(ts[i][0]))+r' s',labelpad = 40,rotation = 270)
