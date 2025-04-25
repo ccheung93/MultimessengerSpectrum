@@ -302,7 +302,33 @@ def plot_parameter_list(ax, i, j, coupling_type, coupling_order, filename):
                 pos = parameter_list_positions[coupling_type][prefix]
             txt = parameter_list[coupling_type][prefix] + '\n' + eta_DM[coupling_type]
             ax.text(*pos, txt, bbox = bbox_style)
+
+def add_label(ax, x, y, txt, rotation = 0, fontsize = 25, 
+              color = 'black', edgecolor = 'black', facecolor = 'white', 
+              alpha = 1 , boxstyle = 'round,pad=0.1'):
+    """Adds a text box label at position (x, y)
     
+    Args:
+        ax (): matplotlib axis
+        x, y (float): coordinates to place label
+        rotation (float): angle in degrees to rotate
+        fontsize (int): font size
+        color (str): color
+        edgecolor (str): box edge color
+        facecolor (str): box fill color
+        alpha (float): box transparency
+        boxstyle (str): box style
+    """
+    ax.text(x, y, txt, 
+            rotation = rotation, 
+            fontsize = fontsize,
+            color = color,
+            bbox=dict(facecolor = facecolor,
+                      alpha = alpha,
+                      edgecolor = edgecolor,
+                      boxstyle = boxstyle
+                      )
+            )
 
 def plot_critical_screening(ax, K_E, K_atm, coupling_type, filename):
     """ Plot critical screening lines """
@@ -449,6 +475,7 @@ def quad_plot(ax, i, j, Etot, m, Elist, t, R, eta, dt, E_unc, m_bench, wmp_conto
     
         ddt_day_fill = d2_from_delta_t(DAY_TO_SEC, R, m, fillregion_x, 1e-6, K_space)
         fillregion_y = np.minimum(d_exp, ddt_day_fill)
+        
         ddt_day1 = d2_from_delta_t(DAY_TO_SEC, R, m, Elist, 1e-6, K_space)
         ddt1 = d2_from_delta_t(dt, R, m, Elist, 1e-6, K_space)
         ddt_day30 = d2_from_delta_t(DAY_TO_SEC, R, m, Elist, 30e-6, K_space)
@@ -456,30 +483,29 @@ def quad_plot(ax, i, j, Etot, m, Elist, t, R, eta, dt, E_unc, m_bench, wmp_conto
         plot_fill_region_quad(ax, Elist, ddt_day1, ddt_day30, ddt1, ddt30)
         
     plot_fill_region(ax, fillregion_x, fillregion_y, coupling)
-
     plot_parameter_list(ax, i, j, coupling_type, 'quad', filename)
+    
     if filename == '10Mpc_'+coupling_type+'_quad_dilatoniccoupling.pdf':
         omega_over_m_dt = omegaoverm_noscreen(dt, R)
         omega_over_m_day = omegaoverm_noscreen(DAY_TO_SEC, R)
         plot_time_labels(ax, m, omega_over_m_dt, omega_over_m_day, 'quad')
 
     if filename == '10kpc_'+coupling_type+'_quad_dilatoniccoupling.pdf':
+        dt_lbl_yr = r'$\delta t\, \gtrsim \, 1~{\rm yr}~\uparrow$'
+        dt_lbl_day = r'$\delta t\, \gtrsim \, 1~{\rm day}~\uparrow$'
+        color_yr = 'tab:red'
+        color_day = 'tab:purple'
         if coupling_type == 'photon':
-            # These time labels are hard-coded
-            ax.text(3e-17,1e27,r'$\delta t\, \gtrsim \, 1~{\rm yr}~\uparrow$',rotation = 37, fontsize = 25, color = 'tab:red',bbox=dict(facecolor='white', alpha = 1, edgecolor='tab:red',boxstyle='round,pad=.1'))
-            ax.text(6e-16,9e26,r'$\delta t\, \gtrsim \, 1~{\rm day}~\uparrow$',rotation = 37, fontsize = 25, color = 'tab:purple',bbox=dict(facecolor='white', alpha = 1, edgecolor='tab:purple',boxstyle='round,pad=.1'))
-
+            add_label(ax, 3e-17, 1e27, dt_lbl_yr, rotation=37, color=color_yr, edgecolor=color_yr)
+            add_label(ax, 6e-16, 9e26, dt_lbl_day, rotation=37, color=color_day, edgecolor=color_day)
         elif coupling_type == 'electron':
-            # These time labels are hard-coded
-            ax.text(3e-17,8.5e26,r'$\delta t\, \gtrsim \, 1~{\rm yr}~\uparrow$',rotation = 39, fontsize = 25, color = 'tab:red',bbox=dict(facecolor='white', alpha = 1, edgecolor='tab:red',boxstyle='round,pad=.1'))
-            ax.text(6e-16,8e26,r'$\delta t\, \gtrsim \, 1~{\rm day}~\uparrow$',rotation = 39, fontsize = 25, color = 'tab:purple',bbox=dict(facecolor='white', alpha = 1, edgecolor='tab:purple',boxstyle='round,pad=.1'))
-            
+            add_label(ax, 3e-17, 8.5e26, dt_lbl_yr, rotation=39, color=color_yr, edgecolor=color_yr)
+            add_label(ax, 6e-16, 8e26, dt_lbl_day, rotation=39, color=color_day, edgecolor=color_day)
         elif coupling_type == 'gluon':
             ax.set_ylim(.5e5,8e30)
-            
-            # These time labels are hard-coded
-            ax.text(3e-17,6e23,r'$\delta t\, \gtrsim \, 1~{\rm yr}~\uparrow$',rotation = 38, fontsize = 25, color = 'tab:red',bbox=dict(facecolor='white', alpha = 1, edgecolor='tab:red',boxstyle='round,pad=.1'))
-            ax.text(6e-16,5e23,r'$\delta t\, \gtrsim \, 1~{\rm day}~\uparrow$',rotation = 38, fontsize = 25, color = 'tab:purple',bbox=dict(facecolor='white', alpha = 1, edgecolor='tab:purple',boxstyle='round,pad=.1'))
+            add_label(ax, 3e-17, 6e23, dt_lbl_yr, rotation=38, color=color_yr, edgecolor=color_yr)
+            add_label(ax, 6e-16, 5e23, dt_lbl_day, rotation=38, color=color_day, edgecolor=color_day)
+
 
 def plots(R, Etot, coupling_type, coupling_order):
     """Generate dilatonic coupling plots 
@@ -545,13 +571,15 @@ def plots(R, Etot, coupling_type, coupling_order):
             elif coupling_order == 'quad':
                 quad_plot(axij, i, j, Etot, m, Elist, t, R, eta, dt, E_unc, m_bench, wmp_contour, K_E, K_atm, K_space, coupling_type, filename)
 
+            # Subplot axis labels
             ax[0,j].set_title(r'$\log_{10}(m_{\phi}/{\rm eV}) = $'+str(int(np.log10(mass[0][j]))), pad = 20)
             ax[i,1].set_ylabel(r'$t_*$ = '+str(int(ts[i][0]))+r' s',labelpad = 40,rotation = 270)
             ax[i,1].yaxis.set_label_position("right")
 
+    # Shared axis labels
     shadowaxes = fig.add_subplot(111, xticks=[], yticks=[], frame_on=False)
-    shadowaxes.set_ylabel(ylabel,fontsize = 45)
-    shadowaxes.set_xlabel(r'$\log_{10}(\omega/\rm{eV})$',fontsize= 45)
+    shadowaxes.set_ylabel(ylabel, fontsize = 45)
+    shadowaxes.set_xlabel(r'$\log_{10}(\omega/\rm{eV})$', fontsize= 45)
     shadowaxes.xaxis.labelpad=50
     shadowaxes.yaxis.labelpad=50
     
