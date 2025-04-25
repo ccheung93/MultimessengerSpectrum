@@ -376,31 +376,57 @@ def plot_critical_screening(ax, K_E, K_atm, coupling_type, filename):
             ax.text(*pos["atm"], lbl["atm"], fontsize = 35, color = 'tab:blue')
             ax.text(*pos["exp"], lbl["exp"], fontsize = 35, color = 'tab:blue')
 
-def plots(R, Etot, coupling_type, coupling_order):
-    m_bench = 1e-21 # in eV
-    m_bench2 = 1e-18
-    ts_bench = 1 # in s
-    ts_bench2 = 1e2
-
-    mass = [[m_bench,m_bench2],
-            [m_bench,m_bench2]]
-    ts = [[ts_bench,ts_bench],
-          [ts_bench2,ts_bench2]]
+def load_linear_constraints(Elist):
+    Microscope_x, Microscope_y = load_external_limits('Linear Scalar Photon/MICROSCOPE.txt')
+    FifthForce_x, FifthForce_y = load_external_limits('Linear Scalar Photon/FifthForce.txt')
+    Microscope_m = [Microscope_y[0]] * len(Elist)    
+    FifthForce_m = [FifthForce_y[0]] * len(Elist)
     
-    distance_label = get_distance_label(R) # get distance label in kpc or Mpc
+    return Microscope_m, FifthForce_m
 
+def plots(R, Etot, coupling_type, coupling_order):
+    """Generate dilatonic coupling plots 
+
+    Args:
+        R (float): distance between the source and the experiment
+        Etot (float): total energy of the burst
+        coupling_type (str): type of coupling ('photon', 'electron' or 'gluon')
+        coupling_order (str): coupling order ('linear' or 'quadratic')
+    """
+    
+    # Benchmark parameters
+    mass_benchmarks = [1e-21, 1e-18] # mass benchmarks in eV
+    ts_benchmarks = [1, 1e2] # burst duration benchmarks in seconds
+    m_bench = 1e-21 # in eV
+    
+    mass = [[mass_benchmarks[0], mass_benchmarks[1]],
+            [mass_benchmarks[0], mass_benchmarks[1]]]
+    
+    ts = [[ts_benchmarks[0], ts_benchmarks[0]],
+          [ts_benchmarks[1], ts_benchmarks[1]]]
+    
+    # Set up general parameters
+    distance_label = get_distance_label(R) 
+    filename = f"{distance_label}_{coupling_type}_{coupling_order}_dilatoniccoupling.pdf"
     wmp_contour = np.logspace(0,30,1000)
+    dt = 1 * 3.154e7 
+    Elist = mass[0][0]*wmp_contour
 
     K_space, K_E, K_atm, eta, ylabel = get_K_params(coupling_type, coupling_order)
 
-    filename = distance_label+'_'+coupling_type+'_'+coupling_order+'_dilatoniccoupling.pdf'
+    # Load constraints for linear coupling order
+    if coupling_order == "linear":
+        Microscope_m, FifthForce_m = load_linear_constraints(Elist)
 
+    # Setup plot
     fig, ax = plt.subplots(2, 2, figsize = (30, 21), sharex = True, sharey = True)
-    plt.rcParams['mathtext.fontset'] = 'cm'
-    plt.rcParams.update({'font.size': 35,'font.family':'STIXGeneral'})
+    plt.rcParams.update({
+        'mathtext.fontset': 'cm',
+        'font.size': 35,
+        'font.family': 'STIXGeneral',
+        'hatch.color': 'lightgray'
+    })
     plt.subplots_adjust(wspace = 0, hspace = 0)
-
-    plt.rcParams['hatch.color'] = 'lightgray'
 
     ax[0,0].set_yscale('log')
     ax[0,0].set_xscale('log')
@@ -408,75 +434,48 @@ def plots(R, Etot, coupling_type, coupling_order):
     # Set tick labels on axes to be in log10
     formatter = FuncFormatter(exponentlabel) 
 
-    dt = 1 * 3.154e7 #year
-    Elist = mass[0][0]*wmp_contour
-
-    # Load MICROSCOPE limits
-    Microscope_x, Microscope_y = load_external_limits('Linear Scalar Photon/MICROSCOPE.txt')
-    Microscope_m = [Microscope_y[0] for i in range(len(Elist))]
-    
-    # Load EotWashEP limits
-    EotWashEP_x, EotWashEP_y = load_external_limits('Linear Scalar Photon/EotWashEP.txt')
-    EotWashEP_m = [EotWashEP_y[0] for i in range(len(Elist))]
-
-    # Load FifthForce limits
-    FifthForce_x, FifthForce_y = load_external_limits('Linear Scalar Photon/FifthForce.txt')
-    FifthForce_m = [FifthForce_y[0] for i in range(len(Elist))]
-
-    if coupling_order == 'linear':    
-        for i in range(2):
-            for j in range(2):
-                t = ts[i][j]
-                m = mass[i][j]
-                E_unc = E_from_uncert(t)
-                axij = ax[i][j]
-                
+    for i in range(2):
+        for j in range(2):
+            t = ts[i][j]
+            m = mass[i][j]
+            E_unc = E_from_uncert(t)
+            axij = ax[i][j]
+            
+            setup_axes(axij, formatter, coupling_order)
+            
+            if coupling_order == 'linear':
                 rho, coherence = signal_duration(Etot, m, Elist, t, R, 1)
                 coupling = d_probe(Elist, rho, coherence, eta, 1)
-                
+
                 omega_over_m_dt = omegaoverm_noscreen(dt, R)
                 omega_over_m_day = omegaoverm_noscreen(DAY_TO_SEC, R)
-                
-                setup_axes(axij, formatter, coupling_order)
+
                 plot_MICROSCOPE(axij, Elist, Microscope_m)
                 plot_FifthForce(axij, t, Elist, E_unc, FifthForce_m)
                 plot_coupling(axij, m, coupling, m_bench, wmp_contour, coupling_order)
                 label_omega_lt_mass(axij, m, coupling_order)
-                
+
                 fillregion_x = np.array([Elist[l] for l in range(len(Elist)) if all([Elist[l] > E_unc, Elist[l] > m*omega_over_m_day])])
                 fillregion_y = [Microscope_m[l] for l in range(len(fillregion_x))]
                 rho, coherence = signal_duration(Etot, m, fillregion_x, t, R, 1)
                 coupling = d_probe(fillregion_x, rho, coherence, eta, 1)
                 plot_fill_region(axij, fillregion_x, fillregion_y, coupling)
-                
+
                 Dg = 30e-6
                 dday = d2_from_delta_t(DAY_TO_SEC, R, m, Elist, Dg, K_space)
                 ddt = d2_from_delta_t(dt, R, m, Elist, Dg, K_space)
                 plot_d_from_delta_t(axij, Elist, dday, ddt)
-                
+
                 plot_time_labels(axij, m, omega_over_m_dt, omega_over_m_day, coupling_order)
                 plot_omega_ts(axij, E_unc, filename)
                 plot_parameter_list(axij, i, j, coupling_type, coupling_order, filename)
-                    
-                ax[0,j].set_title(r'$\log_{10}(m_{\phi}/{\rm eV}) = $'+str(int(np.log10(mass[0][j]))), pad = 20)
-                ax[i,1].set_ylabel(r'$t_*$ = '+str(int(ts[i][0]))+r' s',labelpad = 40,rotation = 270)
-                ax[i,1].yaxis.set_label_position("right")
-
-    if coupling_order == 'quad':    
-        for i in range(2):
-            for j in range(2):
-                t = ts[i][j]
-                m = mass[i][j]
-                E_unc = E_from_uncert(t)
-                axij = ax[i][j]
-                
+            elif coupling_order == 'quad':
                 rho, coherence = signal_duration(Etot, m, Elist, t, R, 1)
                 coupling = d_probe(Elist, rho, coherence, eta, 2)
                 
                 d_screen_earth = d2_screen(Elist, R_E, RHO_E, m, K_E)
                 d_screen_atm = d2_screen(Elist, R_ATM, RHO_ATM, m, K_atm)
                 d_screen_exp = d2_screen(Elist, R_EXP, RHO_EXP, m, K_E)
-                setup_axes(axij, formatter, coupling_order)
                 
                 plot_couplings_screened(axij, Elist, d_screen_earth, d_screen_exp, d_screen_atm)
                 plot_E_unc(axij, E_unc)
@@ -538,10 +537,10 @@ def plots(R, Etot, coupling_type, coupling_order):
                         # These time labels are hard-coded
                         ax[i,j].text(3e-17,6e23,r'$\delta t\, \gtrsim \, 1~{\rm yr}~\uparrow$',rotation = 38, fontsize = 25, color = 'tab:red',bbox=dict(facecolor='white', alpha = 1, edgecolor='tab:red',boxstyle='round,pad=.1'))
                         ax[i,j].text(6e-16,5e23,r'$\delta t\, \gtrsim \, 1~{\rm day}~\uparrow$',rotation = 38, fontsize = 25, color = 'tab:purple',bbox=dict(facecolor='white', alpha = 1, edgecolor='tab:purple',boxstyle='round,pad=.1'))
-                        
-                ax[0,j].set_title(r'$\log_{10}(m_{\phi}/{\rm eV}) = $'+str(int(np.log10(mass[0][j]))), pad = 20)
-                ax[i,1].set_ylabel(r'$t_*$ = '+str(int(ts[i][0]))+r' s',labelpad = 40,rotation = 270)
-                ax[i,1].yaxis.set_label_position("right")
+
+            ax[0,j].set_title(r'$\log_{10}(m_{\phi}/{\rm eV}) = $'+str(int(np.log10(mass[0][j]))), pad = 20)
+            ax[i,1].set_ylabel(r'$t_*$ = '+str(int(ts[i][0]))+r' s',labelpad = 40,rotation = 270)
+            ax[i,1].yaxis.set_label_position("right")
 
     shadowaxes = fig.add_subplot(111, xticks=[], yticks=[], frame_on=False)
     shadowaxes.set_ylabel(ylabel,fontsize = 45)
@@ -550,7 +549,6 @@ def plots(R, Etot, coupling_type, coupling_order):
     shadowaxes.yaxis.labelpad=50
     
     plt.savefig(filename,dpi = 1500)
-    #plt.show()
     
     
 if __name__ == "__main__":
