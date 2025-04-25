@@ -121,8 +121,17 @@ def d2_probe(w, rho, coherence, eta):
     d = eta*PLANCK_MASS_EV**2/(4*PI*phi**2) * coherence
     return d
 
-def d2_from_Lambda(Lambda): #For supernova constraint
-    d = (1/(4*PI))*(PLANCK_MASS_EV/Lambda)**2
+def d_from_Lambda(Lambda, order): 
+    """ Calculate value of dilatonic coupling from Lambda for a given coupling order
+    
+    Args:
+        Lambda (float): energy scale for new physics
+        order (int): coupling order
+    
+    Returns:
+        float: dilatonic coupling calculated from a given Lambda value
+    """
+    d = ((1/np.sqrt(4*PI))*(PLANCK_MASS_EV/Lambda))**order
     return d
 
 def d2_from_delta_t(dt, L, m, E, Dg, K):
@@ -395,7 +404,7 @@ def plot_supernova(ax, Elist, coupling_type):
             "txt_y": 3e29,
             "lbl_y": 3e31,
             "txt": r'${\rm Supernova}~\gamma \gamma \rightarrow \phi \phi$',
-            "line": [d2_from_Lambda(1e12)] * len(Elist)
+            "line": [d_from_Lambda(1e12, 2)] * len(Elist)
         },
         "electron": {
             "ylim": (.5e9, 5e33),
@@ -409,7 +418,7 @@ def plot_supernova(ax, Elist, coupling_type):
             "txt_y": 3e26,
             "lbl_y": 3e29,
             "txt": r'${\rm Supernova}~N N \rightarrow N N \phi \phi$',
-            "line": [d2_from_Lambda(15e12)] * len(Elist)
+            "line": [d_from_Lambda(15e12, 2)] * len(Elist)
         }
     }
     
