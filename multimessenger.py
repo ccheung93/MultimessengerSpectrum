@@ -9,6 +9,7 @@ import time
 usetex: True
 
 from propagation import *
+from limits import *
 
 COLORLIST = ["tab:red", "tab:orange", "tab:purple"]
 
@@ -374,16 +375,6 @@ def plot_critical_screening(ax, K_E, K_atm, coupling_type, filename):
             ax.text(*pos["eth"], lbl["eth"], fontsize = 35, color = 'tab:blue')
             ax.text(*pos["atm"], lbl["atm"], fontsize = 35, color = 'tab:blue')
             ax.text(*pos["exp"], lbl["exp"], fontsize = 35, color = 'tab:blue')
-
-def load_external_limits(filename):
-    x, y = [], []
-    with open(filename, 'r') as f:
-        for line in f:
-            values = line.strip().split()
-            x.append(float(values[0]))
-            y.append(float(values[1]))
-    
-    return x, y
 
 def plots(R, Etot, coupling_type, coupling_order):
     m_bench = 1e-21 # in eV
