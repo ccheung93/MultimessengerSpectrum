@@ -300,15 +300,11 @@ def plot_FifthForce(ax, t, Elist, E_unc, FifthForce_m):
     ax.plot([E_unc, E_unc], [1e50, 1e-50], color = 'chocolate', linestyle = '--')
     ax.fill_between([1e-50, E_unc], [1e-50, 1e-50], [1e50, 1e50], color = 'chocolate', alpha = 0.1)
 
-def plot_coupling(ax, Elist, t, m, R, eta, Etot, m_bench, wmp_contour, coupling_order):
+def plot_coupling(ax, m, coupling, m_bench, wmp_contour, coupling_order):
     """ Plot coupling limits """
-    rho, coherence = signal_duration(Etot, m, Elist, t, R, 1)
-    
     if coupling_order == "linear":
-        coupling = d1_probe(Elist, rho, coherence, eta)
         min_y = 1e-50
     elif coupling_order == "quad":
-        coupling = d2_probe(Elist, rho, coherence, eta)
         min_y = 1e-10
     
     ax.plot(m_bench*wmp_contour, coupling, c = 'k', linewidth = 2, alpha = 1)
@@ -686,10 +682,13 @@ def plots(R, Etot, coupling_type, coupling_order):
                 E_unc = E_from_uncert(t)
                 axij = ax[i][j]
                 
+                rho, coherence = signal_duration(Etot, m, Elist, t, R, 1)
+                coupling = d1_probe(Elist, rho, coherence, eta)
+                
                 setup_axes(axij, formatter, coupling_order)
                 plot_MICROSCOPE(axij, Elist, Microscope_m)
                 plot_FifthForce(axij, t, Elist, E_unc, FifthForce_m)
-                plot_coupling(axij, Elist, t, m, R, eta, Etot, m_bench, wmp_contour, coupling_order)
+                plot_coupling(axij, m, coupling, m_bench, wmp_contour, coupling_order)
                 label_omega_lt_mass(axij, m, coupling_order)      
                 plot_fill_region(axij, Elist, Microscope_m, t, m, R, eta, Etot, E_unc)
                 plot_d_from_delta_t(axij, Elist, m, R, dt, 30e-6, K_space)
@@ -709,6 +708,9 @@ def plots(R, Etot, coupling_type, coupling_order):
                 E_unc = E_from_uncert(t)
                 axij = ax[i][j]
                 
+                rho, coherence = signal_duration(Etot, m, Elist, t, R, 1)
+                coupling = d2_probe(Elist, rho, coherence, eta)
+                
                 d_screen_earth = d2_screen(Elist, R_E, rho_E, m, K_E)
                 d_screen_atm = d2_screen(Elist, R_atm, rho_atm, m, K_atm)
                 d_screen_exp = d2_screen(Elist, R_exp, rho_exp, m, K_E)
@@ -716,7 +718,7 @@ def plots(R, Etot, coupling_type, coupling_order):
                 
                 plot_couplings_screened(axij, Elist, d_screen_earth, d_screen_exp, d_screen_atm)
                 plot_E_unc(axij, E_unc)
-                plot_coupling(axij, Elist, t, m, R, eta, Etot, m_bench, wmp_contour, coupling_order)
+                plot_coupling(axij, m, coupling, m_bench, wmp_contour, coupling_order)
                 label_omega_lt_mass(axij, m, coupling_order)
                 plot_d_from_delta_t(axij, Elist, m, R, dt, 30e-6, K_space)
                 plot_fill_region_quad(axij, Elist, t, m, R, eta, dt, Etot, E_unc, R_exp, rho_exp, K_E, K_space)
