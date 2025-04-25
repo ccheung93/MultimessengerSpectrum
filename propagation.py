@@ -1,6 +1,6 @@
 import numpy as np
 
-# GLOBAL CONSTANTS
+# CONVERSION FACTORS
 INEV_TO_PC = 0.197e-18 * 1e9/3.086e13   # eV^-1 to parsecs
 EV_TO_SOLAR = (1.67e-27/2e30)*1e-9      # 1 eV in solar masses
 SEC_TO_INEV = 1e-9/6.528e-25          # 1 second in eV^-1
@@ -183,7 +183,7 @@ def omegaoverm_noscreen(dt, L):
     return (L+dt)/(np.sqrt(dt * (2*L+dt)))
 
 def d2_screen(E, R, rho, m, K):
-    """ Calculate the critical coupling 
+    """ Calculate the critical values of the quadratic dilatonic coupling 
     
     Args:
         E (array of floats): energies [eV]
@@ -191,6 +191,9 @@ def d2_screen(E, R, rho, m, K):
         rho (float): energy density [eV^4]
         m (float): mass of phi [eV]
         K (float): energy density fraction [unitless]
+        
+    Returns:
+        float: critical value of quadratic dilatonic coupling
     """
     d = PLANCK_MASS_EV**2 / (8*PI*rho*K) * (1/R**2 + E**2 - m**2)
     return d

@@ -312,7 +312,7 @@ def plot_critical_screening(ax, K_E, K_atm, coupling_type, filename):
         "photon": {
             "eth": r'$d_{e,{\rm crit}}^{(2)\, \rm\oplus}$',
             "atm": r'$d_{e,{\rm crit}}^{(2)\, \rm atm}$',
-            "exp": r'$d_{e,{\rm crit}}^{(2)\, \rm app}$' # NOTE - Called this exp instead of app (more obvious to me)
+            "exp": r'$d_{e,{\rm crit}}^{(2)\, \rm app}$'
         },
         "electron": {
             "eth": r'$d_{m_e,{\rm crit}}^{(2)\, \rm\oplus}$',
