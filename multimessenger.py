@@ -75,7 +75,7 @@ def signal_duration(Etot, mass, energies, burst_duration, distance_pc, aw, integ
     
     # Calculate coherence times
     # tau_star = 2*pi/dw + (2*pi*R)/(q^3*m*t_star)
-    # tau_DM = 2*pi/mv^2 ! NOTE - should m be energies or mass (m_phi)?
+    # tau_DM = 2*pi/mv^2
     q = energies/mass
     distance_inev = distance_pc/INEV_TO_PC
     tau_star = 2*PI/dw + 2*PI*distance_inev/(q**3 * mass * burst_duration)
@@ -190,12 +190,28 @@ def omegaoverm_noscreen(dt, L):
     return (L+dt)/(np.sqrt(dt * (2*L+dt)))
 
 def d2_screen(E, R, rho, m, K):
-    """ Calculate the critical coupling"""
+    """ Calculate the critical coupling 
+    
+    Args:
+        E (array of floats): energies [eV]
+        R (float): distance [pc]
+        rho (float): energy density [eV^4]
+        m (float): mass of phi [eV]
+        K (float): energy density fraction [unitless]
+    """
     d = PLANCK_MASS_EV**2 / (8*PI*rho*K) * (1/R**2 + E**2 - m**2)
     return d
 
-def E_from_uncert(t_star):
-    return (2*PI/t_star)/SEC_TO_INEV
+def E_from_uncert(burst_duration):
+    """ Calculate the energy from the burst duration using the Heisenberg uncertainty relation 
+    
+    Args: 
+        burst_duration (float): t_star, the duration of the burst emission at the source [s]
+    
+    Returns:
+        float: energy [eV]
+    """
+    return (2*PI/burst_duration)/SEC_TO_INEV
 
 def exponentlabel(x, pos):
     return str("{:.0f}".format(np.log10(x)))
