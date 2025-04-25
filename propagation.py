@@ -12,6 +12,13 @@ GCM3_TO_EV4 = 4.2e18 # g/cm^3 to eV^4
 PLANCK_MASS_EV = 1.2e28 # Planck mass in eV
 GPC_TO_PC = 1e9 # gigaparsec to parsecs
 PC_TO_METERS = 3.086e16 # parsecs to meters
+
+# Densities of ISM and IGM converted from g/cm^3 to eV^4
+RHO_ISM_GCM3 = 1.67e-24
+RHO_ISM = RHO_ISM_GCM3 * GCM3_TO_EV4
+RHO_IGM_GCM3 = 1.67e-30
+RHO_IGM = RHO_IGM_GCM3 * GCM3_TO_EV4
+
 PI = np.pi 
 
 def signal_duration(Etot, mass, energies, burst_duration, distance_pc, aw, integration_time=1): 
@@ -130,10 +137,6 @@ def d2_from_delta_t(dt, L, m, E, Dg, K):
     Returns:
         float: value of quadratic dilatonic coupling from a time delay
     """
-    # Densities of ISM and IGM in eV^4, what is K for?
-    rho_ISM = 1.67e-24 * GCM3_TO_EV4
-    rho_IGM = 1.67e-30 * GCM3_TO_EV4
-    
     # Galaxy number density [galaxies / Gpc^3]
     ng = 0.006e9 * (L**3)/(GPC_TO_PC**3)
     
@@ -143,13 +146,13 @@ def d2_from_delta_t(dt, L, m, E, Dg, K):
     
     if L < 1e5:
         d = np.array([
-            (((E[i]**2)*(1 - (1/(dt_c/L_meters + 1)**2)) - m**2)/(8*PI*rho_ISM*K))*(PLANCK_MASS_EV**2) for i in range(len(E))
+            (((E[i]**2)*(1 - (1/(dt_c/L_meters + 1)**2)) - m**2)/(8*PI*RHO_ISM*K))*(PLANCK_MASS_EV**2) for i in range(len(E))
         ])
     else:
         k1 = np.array([
             ((2*E[i]**2*dt_c)/L_meters) - m**2 for i in range(len(E))
         ])
-        k3 = 1/((ng**(1/3) + 1)*Dg*rho_ISM*K + (1-(ng**(1/3)+1)*Dg)*rho_IGM*K)
+        k3 = 1/((ng**(1/3) + 1)*Dg*RHO_ISM*K + (1-(ng**(1/3)+1)*Dg)*RHO_IGM*K)
         d = prefactor*k3*k1
     return d
 
