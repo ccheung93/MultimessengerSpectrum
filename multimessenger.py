@@ -347,14 +347,11 @@ def plot_time_labels(ax, m, dt, R, coupling_order):
         txt = label["txt"]
         ax.text(pos_x, pos_y, txt, rotation = 90, fontsize = 25, color = label["color"], bbox = bbox_style(label["color"]))
         
-def plot_couplings_screened(ax, Elist, m, K_E, K_atm, R_atm, rho_atm, R_exp, rho_exp):
-    d_screen_earth = d_screenearth(Elist, m, K_E)
-    d_screen_atm = d_screen(Elist, R_atm, rho_atm, m, K_atm)
-    d_screen_exp = d_screen(Elist, R_exp, rho_exp, m, K_E)
-    ax.fill_between(Elist, d_screen_earth, 1e100, color = 'tab:blue', alpha = .05)
-    ax.plot(Elist, d_screen_atm, color = 'tab:blue', linestyle = 'dashed')
-    ax.plot(Elist, d_screen_exp, color = 'tab:blue', linestyle = 'dotted')
-    ax.plot(Elist, d_screen_earth, color = 'tab:blue', linewidth = 3)
+def plot_couplings_screened(ax, Elist, d_earth, d_exp, d_atm):
+    ax.fill_between(Elist, d_earth, 1e100, color = 'tab:blue', alpha = .05)
+    ax.plot(Elist, d_atm, color = 'tab:blue', linestyle = 'dashed')
+    ax.plot(Elist, d_exp, color = 'tab:blue', linestyle = 'dotted')
+    ax.plot(Elist, d_earth, color = 'tab:blue', linewidth = 3)
 
 def plot_E_unc(ax, E_unc):
     ax.plot([E_unc, E_unc], [1e50, 1e-50], color = 'chocolate', linestyle = '--')
@@ -436,7 +433,7 @@ def plot_omega_ts(ax, E_unc, filename):
     for prefix, val in distance_scale_config.items():
         if filename.startswith(prefix):
             pos_x, pos_y = val["pos"]
-            txt = r'$\omega\,t_{*} \lesssim \, 2\pi$' # omega t_* <~ 2pi
+            txt = r'$\omega\,t_{*} \lesssim \, 2\pi$' # omega t_star <~ 2pi
             ax.text(pos_x, pos_y, txt, color = 'tab:brown', bbox = bbox_style("chocolate"))
                 
 def plot_parameter_list(ax, i, j, coupling_type, coupling_order, filename):
@@ -658,7 +655,7 @@ def plots(R, Etot, coupling_type, coupling_order):
                 m = mass[i][j]
                 E_unc = E_from_uncert(t)
                 axij = ax[i][j]
-
+                
                 setup_axes(axij, formatter, coupling_order)
                 plot_MICROSCOPE(axij, Elist, Microscope_m)
                 plot_FifthForce(axij, t, Elist, E_unc, FifthForce_m)
@@ -682,8 +679,12 @@ def plots(R, Etot, coupling_type, coupling_order):
                 E_unc = E_from_uncert(t)
                 axij = ax[i][j]
                 
+                d_screen_earth = d_screenearth(Elist, m, K_E)
+                d_screen_atm = d_screen(Elist, R_atm, rho_atm, m, K_atm)
+                d_screen_exp = d_screen(Elist, R_exp, rho_exp, m, K_E)
                 setup_axes(axij, formatter, coupling_order)
-                plot_couplings_screened(axij, Elist, m, K_E, K_atm, R_atm, rho_atm, R_exp, rho_exp)
+                
+                plot_couplings_screened(axij, Elist, d_screen_earth, d_screen_exp, d_screen_atm)
                 plot_E_unc(axij, E_unc)
                 plot_coupling(axij, Elist, t, m, R, eta, Etot, m_bench, wmp_contour, coupling_order)
                 label_omega_lt_mass(axij, m, coupling_order)
@@ -701,7 +702,6 @@ def plots(R, Etot, coupling_type, coupling_order):
                         # These time labels are hard-coded
                         ax[i,j].text(3e-17,1e27,r'$\delta t\, \gtrsim \, 1~{\rm yr}~\uparrow$',rotation = 37, fontsize = 25, color = 'tab:red',bbox=dict(facecolor='white', alpha = 1, edgecolor='tab:red',boxstyle='round,pad=.1'))
                         ax[i,j].text(6e-16,9e26,r'$\delta t\, \gtrsim \, 1~{\rm day}~\uparrow$',rotation = 37, fontsize = 25, color = 'tab:purple',bbox=dict(facecolor='white', alpha = 1, edgecolor='tab:purple',boxstyle='round,pad=.1'))
-                        
 
                     elif coupling_type == 'electron':
                         # These time labels are hard-coded
