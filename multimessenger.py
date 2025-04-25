@@ -313,18 +313,18 @@ def plot_fill_region_quad(ax, Elist, ddt_day1, ddt_day30, ddt1, ddt30):
     ax.fill_between(Elist, ddt_day1, ddt_day30, color = COLORLIST[2], alpha = 0.1)
     ax.fill_between(Elist, ddt1, ddt30, color = COLORLIST[0], alpha = 0.1)
 
-def plot_time_labels(ax, m, dt, R, coupling_order):
+def plot_time_labels(ax, m, omega_over_m_dt, omega_over_m_day, coupling_order):
     bbox_style = lambda color: dict(facecolor = 'white', alpha = 1, edgecolor = color, boxstyle = 'round,pad=.1')
     
     # Define time labels 
     time_labels = [
         {
-            "delta_t": dt, 
+            "omega_over_m": omega_over_m_dt, 
             "color": "tab:red", 
             "txt": r'$\delta t\, \gtrsim \, 1~{\rm yr}~ \uparrow $' # dt >~ 1 year
             },
         {
-            "delta_t": DAY_TO_SEC, 
+            "omega_over_m": omega_over_m_day, 
             "color": "tab:purple", 
             "txt": r'$\delta t\, \gtrsim \, 1~{\rm day}~ \uparrow$' # dt >~ 1 day
             }
@@ -338,8 +338,7 @@ def plot_time_labels(ax, m, dt, R, coupling_order):
     
     # Label regions in parameter space for each time label
     for label in time_labels:
-        omega_over_m = omegaoverm_noscreen(label["delta_t"], R)
-        pos_x = m*omega_over_m/4
+        pos_x = m*label["omega_over_m"]/4
         pos_y = pos_y_coupling[coupling_order]
         txt = label["txt"]
         ax.text(pos_x, pos_y, txt, rotation = 90, fontsize = 25, color = label["color"], bbox = bbox_style(label["color"]))
@@ -600,7 +599,6 @@ def plots(R, Etot, coupling_type, coupling_order):
     fig, ax = plt.subplots(2, 2, figsize = (30, 21), sharex = True, sharey = True)
     plt.rcParams['mathtext.fontset'] = 'cm'
     plt.rcParams.update({'font.size': 35,'font.family':'STIXGeneral'})
-    axis_font = {'fontname':'Times New Roman', 'size':'35'}
     plt.subplots_adjust(wspace = 0, hspace = 0)
 
     plt.rcParams['hatch.color'] = 'lightgray'
@@ -643,7 +641,8 @@ def plots(R, Etot, coupling_type, coupling_order):
                 rho, coherence = signal_duration(Etot, m, Elist, t, R, 1)
                 coupling = d_probe(Elist, rho, coherence, eta, 1)
                 
-                omega_over_m_no_screen = omegaoverm_noscreen(DAY_TO_SEC, R)
+                omega_over_m_dt = omegaoverm_noscreen(dt, R)
+                omega_over_m_day = omegaoverm_noscreen(DAY_TO_SEC, R)
                 
                 setup_axes(axij, formatter, coupling_order)
                 plot_MICROSCOPE(axij, Elist, Microscope_m)
@@ -651,7 +650,7 @@ def plots(R, Etot, coupling_type, coupling_order):
                 plot_coupling(axij, m, coupling, m_bench, wmp_contour, coupling_order)
                 label_omega_lt_mass(axij, m, coupling_order)
                 
-                fillregion_x = np.array([Elist[l] for l in range(len(Elist)) if all([Elist[l] > E_unc, Elist[l] > m*omega_over_m_no_screen])])
+                fillregion_x = np.array([Elist[l] for l in range(len(Elist)) if all([Elist[l] > E_unc, Elist[l] > m*omega_over_m_day])])
                 fillregion_y = [Microscope_m[l] for l in range(len(fillregion_x))]
                 rho, coherence = signal_duration(Etot, m, fillregion_x, t, R, 1)
                 coupling = d_probe(fillregion_x, rho, coherence, eta, 1)
@@ -661,7 +660,8 @@ def plots(R, Etot, coupling_type, coupling_order):
                 dday = d2_from_delta_t(DAY_TO_SEC, R, m, Elist, Dg, K_space)
                 ddt = d2_from_delta_t(dt, R, m, Elist, Dg, K_space)
                 plot_d_from_delta_t(axij, Elist, dday, ddt)
-                plot_time_labels(axij, m, dt, R, coupling_order)
+                
+                plot_time_labels(axij, m, omega_over_m_dt, omega_over_m_day, coupling_order)
                 plot_omega_ts(axij, E_unc, filename)
                 plot_parameter_list(axij, i, j, coupling_type, coupling_order, filename)
                     
@@ -724,7 +724,9 @@ def plots(R, Etot, coupling_type, coupling_order):
 
                 plot_parameter_list(axij, i, j, coupling_type, coupling_order, filename)
                 if filename == '10Mpc_'+coupling_type+'_quad_dilatoniccoupling.pdf':
-                    plot_time_labels(axij, m, dt, R, coupling_order)
+                    omega_over_m_dt = omegaoverm_noscreen(dt, R)
+                    omega_over_m_day = omegaoverm_noscreen(DAY_TO_SEC, R)
+                    plot_time_labels(axij, m, omega_over_m_dt, omega_over_m_day, coupling_order)
 
                 if filename == '10kpc_'+coupling_type+'_quad_dilatoniccoupling.pdf':
                     if coupling_type == 'photon':
