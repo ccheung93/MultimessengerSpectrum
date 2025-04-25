@@ -405,17 +405,11 @@ def plots(R, Etot, coupling_type, coupling_order):
     ax[0,0].set_yscale('log')
     ax[0,0].set_xscale('log')
     
-    formatter = FuncFormatter(exponentlabel) # customize tick labels on axes to be in log10
+    # Set tick labels on axes to be in log10
+    formatter = FuncFormatter(exponentlabel) 
 
     dt = 1 * 3.154e7 #year
     Elist = mass[0][0]*wmp_contour
-    
-    rho_E = 5.5 * GCM3_TO_EV4
-    R_E = 6.371e6 * 5.07e6
-    R_atm = 1e4* 5.07e6
-    rho_atm = 1e-3 * GCM3_TO_EV4
-    R_exp = 1e0* 5.07e6
-    rho_exp = 5.5 * GCM3_TO_EV4
 
     # Load MICROSCOPE limits
     Microscope_x, Microscope_y = load_external_limits('Linear Scalar Photon/MICROSCOPE.txt')
@@ -479,9 +473,9 @@ def plots(R, Etot, coupling_type, coupling_order):
                 rho, coherence = signal_duration(Etot, m, Elist, t, R, 1)
                 coupling = d_probe(Elist, rho, coherence, eta, 2)
                 
-                d_screen_earth = d2_screen(Elist, R_E, rho_E, m, K_E)
-                d_screen_atm = d2_screen(Elist, R_atm, rho_atm, m, K_atm)
-                d_screen_exp = d2_screen(Elist, R_exp, rho_exp, m, K_E)
+                d_screen_earth = d2_screen(Elist, R_E, RHO_E, m, K_E)
+                d_screen_atm = d2_screen(Elist, R_ATM, RHO_ATM, m, K_atm)
+                d_screen_exp = d2_screen(Elist, R_EXP, RHO_EXP, m, K_E)
                 setup_axes(axij, formatter, coupling_order)
                 
                 plot_couplings_screened(axij, Elist, d_screen_earth, d_screen_exp, d_screen_atm)
@@ -497,7 +491,7 @@ def plots(R, Etot, coupling_type, coupling_order):
                 fillregion_x = Elist[Elist > E_unc]
                 rho, coherence = signal_duration(Etot, m, fillregion_x, t, R, 1)
                 coupling = d_probe(fillregion_x, rho, coherence, eta, 2)
-                d_exp = d2_screen(fillregion_x, R_exp, rho_exp, m, K_E)
+                d_exp = d2_screen(fillregion_x, R_EXP, RHO_EXP, m, K_E)
                 
                 plot_supernova(axij, Elist, coupling_type)
                 plot_critical_screening(axij, K_E, K_atm, coupling_type, filename)

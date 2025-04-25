@@ -12,12 +12,21 @@ GCM3_TO_EV4 = 4.2e18 # g/cm^3 to eV^4
 PLANCK_MASS_EV = 1.2e28 # Planck mass in eV
 GPC_TO_PC = 1e9 # gigaparsec to parsecs
 PC_TO_METERS = 3.086e16 # parsecs to meters
+METERS_TO_INEV = 5.07e6 # meters to 1/eV
 
 # Densities of ISM and IGM converted from g/cm^3 to eV^4
 RHO_ISM_GCM3 = 1.67e-24
 RHO_ISM = RHO_ISM_GCM3 * GCM3_TO_EV4
 RHO_IGM_GCM3 = 1.67e-30
 RHO_IGM = RHO_IGM_GCM3 * GCM3_TO_EV4
+
+# Density and radius of the Earth, atmosphere and experiment
+RHO_E = 5.5 * GCM3_TO_EV4
+R_E = 6.371e6 * METERS_TO_INEV
+RHO_ATM = 1e-3 * GCM3_TO_EV4
+R_ATM = 1e4 * METERS_TO_INEV
+RHO_EXP = RHO_E
+R_EXP = 1 * METERS_TO_INEV
 
 PI = np.pi 
 
