@@ -302,47 +302,16 @@ def plot_coupling(ax, m, coupling, m_bench, wmp_contour, coupling_order):
     ax.plot([m, m], [min_y, 1e50], c = 'k', linestyle = '--')
     ax.fill_between([1e-30, m], min_y, 1e50, facecolor = 'none', hatch = "/", edgecolor = 'k', alpha = 0.3)
 
-def plot_d_from_delta_t(ax, Elist, m, R, dt, Dg, K_space):
-    d = d2_from_delta_t(DAY_TO_SEC, R, m, Elist, Dg, K_space)
-    ax.plot(Elist, d, color = COLORLIST[2], linewidth = 2, linestyle = '--'  )
-    
-    d = d2_from_delta_t(dt, R, m, Elist, Dg, K_space)
-    ax.plot(Elist, d, color = COLORLIST[0], linewidth = 2, linestyle = '--'  )
+def plot_d_from_delta_t(ax, Elist, dday, ddt):
+    ax.plot(Elist, dday, color = COLORLIST[2], linewidth = 2, linestyle = '--'  )
+    ax.plot(Elist, ddt, color = COLORLIST[0], linewidth = 2, linestyle = '--'  )
 
-def plot_fill_region(ax, Elist, Microscope_m, t, m, R, eta, Etot, E_unc):    
-    omega_over_m = omegaoverm_noscreen(DAY_TO_SEC, R)
-    fillregion_x = np.array([Elist[l] for l in range(len(Elist)) if all([Elist[l] > E_unc, Elist[l] > m*omega_over_m])])
-    fillregion_y = [Microscope_m[l] for l in range(len(fillregion_x))]
-    
-    rho, coherence = signal_duration(Etot, m, fillregion_x, t, R, 1)
-    coupling = d_probe(fillregion_x, rho, coherence, eta, 1)
+def plot_fill_region(ax, fillregion_x, fillregion_y, coupling):    
     ax.fill_between(fillregion_x, coupling, fillregion_y, where = coupling < fillregion_y, color = 'tab:green',alpha = 0.3)
 
-def plot_fill_region_quad(ax, Elist, t, m, R, eta, dt, Etot, E_unc, R_exp, rho_exp, K_E, K_space):
-    fillregion_x = Elist[Elist > E_unc]
-    rho, coherence = signal_duration(Etot, m, fillregion_x, t, R, 1)
-    coupling = d_probe(fillregion_x, rho, coherence, eta, 2)
-    d_exp = d2_screen(fillregion_x, R_exp, rho_exp, m, K_E)
-    
-    if R < 1e5:
-        ddt_day = d2_from_delta_t(DAY_TO_SEC, R, m, fillregion_x, 30e-6, K_space)
-        fillregion_y = np.minimum(d_exp, ddt_day)
-
-        ax.fill_between(fillregion_x, coupling, fillregion_y, where = coupling < fillregion_y, color = 'tab:green', alpha = 0.3)
-    else:
-        plot_d_from_delta_t(ax, Elist, m, R, dt, 1e-6, K_space)
-        
-        ddt_day_fill = d2_from_delta_t(DAY_TO_SEC, R, m, fillregion_x, 1e-6, K_space)
-        fillregion_y = np.minimum(d_exp, ddt_day_fill)
-        
-        ax.fill_between(fillregion_x, coupling, fillregion_y, where = coupling < fillregion_y, color = 'tab:green', alpha = 0.3)
-        
-        ddt_day1 = d2_from_delta_t(DAY_TO_SEC, R, m, Elist, 1e-6, K_space)
-        ddt1 = d2_from_delta_t(dt, R, m, Elist, 1e-6, K_space)
-        ddt_day30 = d2_from_delta_t(DAY_TO_SEC, R, m, Elist, 30e-6, K_space)
-        ddt30 = d2_from_delta_t(dt, R, m, Elist, 30e-6, K_space)
-        ax.fill_between(Elist, ddt_day1, ddt_day30, color = COLORLIST[2], alpha = 0.1)
-        ax.fill_between(Elist, ddt1, ddt30, color = COLORLIST[0], alpha = 0.1)
+def plot_fill_region_quad(ax, Elist, ddt_day1, ddt_day30, ddt1, ddt30):
+    ax.fill_between(Elist, ddt_day1, ddt_day30, color = COLORLIST[2], alpha = 0.1)
+    ax.fill_between(Elist, ddt1, ddt30, color = COLORLIST[0], alpha = 0.1)
 
 def plot_time_labels(ax, m, dt, R, coupling_order):
     bbox_style = lambda color: dict(facecolor = 'white', alpha = 1, edgecolor = color, boxstyle = 'round,pad=.1')
@@ -676,13 +645,24 @@ def plots(R, Etot, coupling_type, coupling_order):
                 rho, coherence = signal_duration(Etot, m, Elist, t, R, 1)
                 coupling = d_probe(Elist, rho, coherence, eta, 1)
                 
+                omega_over_m_no_screen = omegaoverm_noscreen(DAY_TO_SEC, R)
+                
                 setup_axes(axij, formatter, coupling_order)
                 plot_MICROSCOPE(axij, Elist, Microscope_m)
                 plot_FifthForce(axij, t, Elist, E_unc, FifthForce_m)
                 plot_coupling(axij, m, coupling, m_bench, wmp_contour, coupling_order)
-                label_omega_lt_mass(axij, m, coupling_order)      
-                plot_fill_region(axij, Elist, Microscope_m, t, m, R, eta, Etot, E_unc)
-                plot_d_from_delta_t(axij, Elist, m, R, dt, 30e-6, K_space)
+                label_omega_lt_mass(axij, m, coupling_order)
+                
+                fillregion_x = np.array([Elist[l] for l in range(len(Elist)) if all([Elist[l] > E_unc, Elist[l] > m*omega_over_m_no_screen])])
+                fillregion_y = [Microscope_m[l] for l in range(len(fillregion_x))]
+                rho, coherence = signal_duration(Etot, m, fillregion_x, t, R, 1)
+                coupling = d_probe(fillregion_x, rho, coherence, eta, 1)
+                plot_fill_region(axij, fillregion_x, fillregion_y, coupling)
+                
+                Dg = 30e-6
+                dday = d2_from_delta_t(DAY_TO_SEC, R, m, Elist, Dg, K_space)
+                ddt = d2_from_delta_t(dt, R, m, Elist, Dg, K_space)
+                plot_d_from_delta_t(axij, Elist, dday, ddt)
                 plot_time_labels(axij, m, dt, R, coupling_order)
                 plot_omega_ts(axij, E_unc, filename)
                 plot_parameter_list(axij, i, j, coupling_type, coupling_order, filename)
@@ -711,10 +691,38 @@ def plots(R, Etot, coupling_type, coupling_order):
                 plot_E_unc(axij, E_unc)
                 plot_coupling(axij, m, coupling, m_bench, wmp_contour, coupling_order)
                 label_omega_lt_mass(axij, m, coupling_order)
-                plot_d_from_delta_t(axij, Elist, m, R, dt, 30e-6, K_space)
-                plot_fill_region_quad(axij, Elist, t, m, R, eta, dt, Etot, E_unc, R_exp, rho_exp, K_E, K_space)
+                
+                Dg = 30e-6
+                dday = d2_from_delta_t(DAY_TO_SEC, R, m, Elist, Dg, K_space)
+                ddt = d2_from_delta_t(dt, R, m, Elist, Dg, K_space)
+                plot_d_from_delta_t(axij, Elist, dday, ddt)
+                
+                fillregion_x = Elist[Elist > E_unc]
+                rho, coherence = signal_duration(Etot, m, fillregion_x, t, R, 1)
+                coupling = d_probe(fillregion_x, rho, coherence, eta, 2)
+                d_exp = d2_screen(fillregion_x, R_exp, rho_exp, m, K_E)
+                
                 plot_supernova(axij, Elist, coupling_type)
                 plot_critical_screening(axij, K_E, K_atm, coupling_type, filename)
+                
+                if R < 1e5:
+                    ddt_day = d2_from_delta_t(DAY_TO_SEC, R, m, fillregion_x, 30e-6, K_space)
+                    fillregion_y = np.minimum(d_exp, ddt_day)
+                else:
+                    Dg = 1e-6
+                    dday = d2_from_delta_t(DAY_TO_SEC, R, m, Elist, Dg, K_space)
+                    ddt = d2_from_delta_t(dt, R, m, Elist, Dg, K_space)
+                    plot_d_from_delta_t(axij, Elist, dday, ddt)
+        
+                    ddt_day_fill = d2_from_delta_t(DAY_TO_SEC, R, m, fillregion_x, 1e-6, K_space)
+                    fillregion_y = np.minimum(d_exp, ddt_day_fill)
+                    ddt_day1 = d2_from_delta_t(DAY_TO_SEC, R, m, Elist, 1e-6, K_space)
+                    ddt1 = d2_from_delta_t(dt, R, m, Elist, 1e-6, K_space)
+                    ddt_day30 = d2_from_delta_t(DAY_TO_SEC, R, m, Elist, 30e-6, K_space)
+                    ddt30 = d2_from_delta_t(dt, R, m, Elist, 30e-6, K_space)
+                    plot_fill_region_quad(axij, Elist, ddt_day1, ddt_day30, ddt1, ddt30)
+                    
+                plot_fill_region(axij, fillregion_x, fillregion_y, coupling)
 
                 plot_parameter_list(axij, i, j, coupling_type, coupling_order, filename)
                 if filename == '10Mpc_'+coupling_type+'_quad_dilatoniccoupling.pdf':
