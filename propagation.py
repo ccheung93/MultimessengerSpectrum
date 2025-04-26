@@ -1,18 +1,27 @@
 import numpy as np
 
 # CONVERSION FACTORS
-INEV_TO_PC = 0.197e-18 * 1e9/3.086e13   # eV^-1 to parsecs
-EV_TO_SOLAR = (1.67e-27/2e30)*1e-9      # 1 eV in solar masses
-SEC_TO_INEV = 1e-9/6.528e-25          # 1 second in eV^-1
-AVG_VEL_DM = 1e-3 # Average velocity of galactic Dark Matter
-YEAR_TO_SEC = 3.154e7 # number of seconds in 1 year
-DAY_TO_SEC = 60*60*24 # number of seconds in 1 day
-SPEED_OF_LIGHT = 3e8 # speed of light in m/s
-GCM3_TO_EV4 = 4.2e18 # g/cm^3 to eV^4
-PLANCK_MASS_EV = 1.2e28 # Planck mass in eV
-GPC_TO_PC = 1e9 # gigaparsec to parsecs
-PC_TO_METERS = 3.086e16 # parsecs to meters
-METERS_TO_INEV = 5.07e6 # meters to 1/eV
+SPEED_OF_LIGHT = 3e8                       # speed of light in m/s
+HBAR = 6.528e-16                           # reduced Planck constant in eV*s
+
+INEV_TO_METERS = 1.97e-7                   # eV^-1 to meters
+PC_TO_METERS = 3.086e16                    # parsecs to meters
+INEV_TO_PC = INEV_TO_METERS/PC_TO_METERS   # eV^-1 to parsecs
+MASS_SUN_KG = 2e30                         # mass of the sun in kg
+EV_TO_JOULES = 1.6e-19                     # eV to joules
+EV_TO_KG = EV_TO_JOULES/SPEED_OF_LIGHT**2  # eV to kg
+EV_TO_SOLAR = EV_TO_KG/MASS_SUN_KG         # eV to solar mass
+
+SEC_TO_INEV = 1/HBAR                       # 1 second to eV^-1
+
+DAY_TO_SEC = 60*60*24                      # number of seconds in 1 day
+YEAR_TO_SEC = 365*DAY_TO_SEC               # number of seconds in 1 year
+
+GCM3_TO_EV4 = 4.2e18                       # g/cm^3 to eV^4
+PLANCK_MASS_EV = 1.2e28                    # Planck mass in eV
+GPC_TO_PC = 1e9                            # gigaparsec to parsecs
+METERS_TO_INEV = 5.07e6                    # meters to 1/eV
+AVG_VEL_DM = 1e-3                          # average velocity of galactic Dark Matter
 
 # Densities of ISM and IGM converted from g/cm^3 to eV^4
 RHO_ISM_GCM3 = 1.67e-24
@@ -170,7 +179,7 @@ def d2_from_delta_t(dt, L, m, E, Dg, K):
         k1 = np.array([
             ((2*E[i]**2*dt_c)/L_meters) - m**2 for i in range(len(E))
         ])
-        k3 = 1/((ng**(1/3) + 1)*Dg*RHO_ISM*K + (1-(ng**(1/3)+1)*Dg)*RHO_IGM*K)
+        k3 = 1/((ng**(1/3) + 1)*Dg*RHO_ISM*K + (1-(ng**(1/3)+1)*Dg)*RHO_IGM*K)  # NOTE - first and third terms in denom. have units [L*eV^4]
         d = prefactor*k3*k1
     return d
 
@@ -216,4 +225,4 @@ def E_from_uncert(burst_duration):
     Returns:
         float: energy [eV]
     """
-    return (2*PI/burst_duration)/SEC_TO_INEV
+    return 2*PI/(burst_duration*SEC_TO_INEV)
