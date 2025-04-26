@@ -141,7 +141,7 @@ def d2_from_delta_t(dt, L, m, E, Dg, K):
         m (float): mass of phi [eV]
         E (array of floats): energies [eV]
         Dg (float): distance per galaxy of signal propagation [pc]
-        K (float): expectation value of the operator in normal matter?
+        K (float): energy density fraction [unitless]
         
     Returns:
         float: value of quadratic dilatonic coupling from a time delay
@@ -153,10 +153,19 @@ def d2_from_delta_t(dt, L, m, E, Dg, K):
     L_meters = L * PC_TO_METERS
     dt_c = dt * SPEED_OF_LIGHT
     
+    # ISM regime:
+    #          M_pl^2                       1
+    # d2 = -------------- [ E^2 ( 1 - ------------ ) - m^2 ]
+    #       8*pi*rho_ISM               (1+dt/R)^2
+    #
     if L < 1e5:
         d = np.array([
             (((E[i]**2)*(1 - (1/(dt_c/L_meters + 1)**2)) - m**2)/(8*PI*RHO_ISM*K))*(PLANCK_MASS_EV**2) for i in range(len(E))
         ])
+    # ISM+IGM regime:
+    #
+    # d2 = 
+    #
     else:
         k1 = np.array([
             ((2*E[i]**2*dt_c)/L_meters) - m**2 for i in range(len(E))
@@ -165,7 +174,7 @@ def d2_from_delta_t(dt, L, m, E, Dg, K):
         d = prefactor*k3*k1
     return d
 
-def omegaoverm_noscreen(dt, L):
+def omegaoverm_noscreen(dt, L):#
     """ Returns omega/m without screening (beta(x) = 0)
         omega           L+dt
         ----- = ---------------------
@@ -195,7 +204,7 @@ def d2_screen(E, R, rho, m, K):
     Returns:
         float: critical value of quadratic dilatonic coupling
     """
-    d = PLANCK_MASS_EV**2 / (8*PI*rho*K) * (1/R**2 + E**2 - m**2)
+    d = PLANCK_MASS_EV**2 / (8*PI*rho*K) * (1/R**2 + E**2 - m**2) # NOTE - should R -> 2R?
     return d
 
 def E_from_uncert(burst_duration):
