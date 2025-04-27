@@ -56,7 +56,7 @@ def signal_duration(Etot, mass, energies, burst_duration, distance_pc, aw, integ
 
     Returns:
         rho (float) - energy density of phi at Earth [eV^4]
-        coherence (list of float) - coherence time values for each energy [unitless]
+        rescaling_factor (list of float) - rescaling factors for each energy [unitless]
     """ 
     # Convert integration time to seconds and then to inverse eV
     integration_time_s = integration_time * DAY_TO_SEC
@@ -104,13 +104,13 @@ def signal_duration(Etot, mass, energies, burst_duration, distance_pc, aw, integ
     
     return rho, rescaling_factor
 
-def d_probe(w, rho, coherence, eta, order):
+def d_probe(w, rho, rescaling_factor, eta, order):
     """ Calculate value of dilatonic coupling we can probe
 
     Args:
         w (float): energy of phi emitted by the source
         rho (float): density of phi at the Earth
-        coherence (array of floats): coherence times
+        rescaling_factor (array of floats): rescaling factors
         eta (float): fractional sensitivity of coupling_type to dark matter signal
         order (int): coupling order
 
@@ -119,10 +119,10 @@ def d_probe(w, rho, coherence, eta, order):
     """
     if order == 1:
         phi = np.sqrt(rho)/(2*w)
-        d = eta*PLANCK_MASS_EV/(2*np.sqrt(PI)*phi) * coherence
+        d = eta*PLANCK_MASS_EV/(2*np.sqrt(PI)*phi) * rescaling_factor
     elif order == 2:
         phi = np.sqrt(2*rho)/w
-        d = eta*PLANCK_MASS_EV**2/(4*PI*phi**2) * coherence
+        d = eta*PLANCK_MASS_EV**2/(4*PI*phi**2) * rescaling_factor
     else:
         raise ValueError(f"Unsupported coupling order: {order}")
     return d
