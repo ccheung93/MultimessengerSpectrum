@@ -411,62 +411,47 @@ def load_linear_constraints(Elist):
     
     return Microscope_m, FifthForce_m
 
-def linear_plot(ax, i, j, Etot, m, Elist, t, R, eta, dt, Microscope_m, FifthForce_m, E_unc, m_bench, wmp_contour, K_space, coupling_type, filename):
+def linear_plot(ax, i, j, coupling, m, Elist, t, dday, ddt, wm_dt, wm_day, Microscope_m, FifthForce_m, E_unc, m_bench, wmp_contour, coupling_type, filename):
     """ Plots for linear coupling_order """
-    rho, coherence = signal_duration(Etot, m, Elist, t, R, 1)
-    coupling = d_probe(Elist, rho, coherence, eta, 1)
 
     plot_MICROSCOPE(ax, Elist, Microscope_m)
     plot_FifthForce(ax, t, Elist, E_unc, FifthForce_m)
     plot_coupling(ax, m, coupling, m_bench, wmp_contour, 'linear')
     label_omega_lt_mass(ax, m, 'linear')
     
-    fillregion_x = Elist[(Elist > E_unc) & (Elist > m * omegaoverm_noscreen(DAY_TO_SEC, R))]
+    condition_mask = (Elist > E_unc) & (Elist > m * wm_day)
+    fillregion_x = Elist[condition_mask]
+    coupling_fill = coupling[condition_mask]
     fillregion_y = [Microscope_m[l] for l in range(len(fillregion_x))]
-    
-    rho, coherence = signal_duration(Etot, m, fillregion_x, t, R, 1)
-    coupling_fill = d_probe(fillregion_x, rho, coherence, eta, 1)
     plot_fill_region(ax, fillregion_x, fillregion_y, coupling_fill)
-    
-    Dg = 30e-6
-    dday = d2_from_delta_t(DAY_TO_SEC, R, m, Elist, Dg, K_space)
-    ddt = d2_from_delta_t(dt, R, m, Elist, Dg, K_space)
+
     plot_d_from_delta_t(ax, Elist, dday, ddt)
     
-    plot_time_labels(ax, m, omegaoverm_noscreen(dt, R), omegaoverm_noscreen(DAY_TO_SEC, R), 'linear')
+    plot_time_labels(ax, m, wm_dt, wm_day, 'linear')
     plot_omega_ts(ax, E_unc, filename)
     plot_parameter_list(ax, i, j, coupling_type, 'linear', filename)
 
-def quad_plot(ax, i, j, Etot, m, Elist, t, R, eta, dt, E_unc, m_bench, wmp_contour, K_E, K_atm, K_space, coupling_type, filename):
+def quad_plot(ax, i, j, coupling, m, Elist, d_screen_earth, d_screen_exp, d_screen_atm, dday1, ddt1, dday30, ddt30, wm_dt, wm_day, R, E_unc, m_bench, wmp_contour, K_E, K_atm, coupling_type, filename):
     """ Plots for quadratic coupling_order """
-    rho, coherence = signal_duration(Etot, m, Elist, t, R, 1)
-    coupling = d_probe(Elist, rho, coherence, eta, 2)
-    
-    d_screen_earth = d2_screen(Elist, R_E, RHO_E, m, K_E)
-    d_screen_atm = d2_screen(Elist, R_ATM, RHO_ATM, m, K_atm)
-    d_screen_exp = d2_screen(Elist, R_EXP, RHO_EXP, m, K_E)
     
     plot_couplings_screened(ax, Elist, d_screen_earth, d_screen_exp, d_screen_atm)
     plot_E_unc(ax, E_unc)
     plot_coupling(ax, m, coupling, m_bench, wmp_contour, 'quad')
     label_omega_lt_mass(ax, m, 'quad')
     
-    Dg = 30e-6
-    dday = d2_from_delta_t(DAY_TO_SEC, R, m, Elist, Dg, K_space)
-    ddt = d2_from_delta_t(dt, R, m, Elist, Dg, K_space)
-    plot_d_from_delta_t(ax, Elist, dday, ddt)
+    plot_d_from_delta_t(ax, Elist, dday30, ddt30)
     
-    fillregion_x = Elist[Elist > E_unc]
-    rho, coherence = signal_duration(Etot, m, fillregion_x, t, R, 1)
-    coupling = d_probe(fillregion_x, rho, coherence, eta, 2)
-    d_exp = d2_screen(fillregion_x, R_EXP, RHO_EXP, m, K_E)
+    condition_mask = Elist > E_unc
+    fillregion_x = Elist[condition_mask]
+    coupling_fill = coupling[condition_mask]
+    d_exp = d_screen_exp[condition_mask]
     
     plot_supernova(ax, Elist, coupling_type)
     plot_critical_screening(ax, K_E, K_atm, coupling_type, filename)
     
     if R < 1e5:
-        ddt_day = d2_from_delta_t(DAY_TO_SEC, R, m, fillregion_x, 30e-6, K_space)
-        fillregion_y = np.minimum(d_exp, ddt_day)
+        dday30_fill = dday30[condition_mask]
+        fillregion_y = np.minimum(d_exp, dday30_fill)
         
         dt_lbl_yr = r'$\delta t\, \gtrsim \, 1~{\rm yr}~\uparrow$'
         dt_lbl_day = r'$\delta t\, \gtrsim \, 1~{\rm day}~\uparrow$'
@@ -483,25 +468,16 @@ def quad_plot(ax, i, j, Etot, m, Elist, t, R, eta, dt, E_unc, m_bench, wmp_conto
             add_label(ax, 3e-17, 6e23, dt_lbl_yr, rotation=38, color=color_yr, edgecolor=color_yr)
             add_label(ax, 6e-16, 5e23, dt_lbl_day, rotation=38, color=color_day, edgecolor=color_day)
     else:
-        Dg = 1e-6
-        dday = d2_from_delta_t(DAY_TO_SEC, R, m, Elist, Dg, K_space)
-        ddt = d2_from_delta_t(dt, R, m, Elist, Dg, K_space)
-        plot_d_from_delta_t(ax, Elist, dday, ddt)
+        plot_d_from_delta_t(ax, Elist, dday1, ddt1)
     
-        ddt_day_fill = d2_from_delta_t(DAY_TO_SEC, R, m, fillregion_x, 1e-6, K_space)
-        fillregion_y = np.minimum(d_exp, ddt_day_fill)
+        dday_fill = dday1[condition_mask]
         
-        ddt_day1 = d2_from_delta_t(DAY_TO_SEC, R, m, Elist, 1e-6, K_space)
-        ddt1 = d2_from_delta_t(dt, R, m, Elist, 1e-6, K_space)
-        ddt_day30 = d2_from_delta_t(DAY_TO_SEC, R, m, Elist, 30e-6, K_space)
-        ddt30 = d2_from_delta_t(dt, R, m, Elist, 30e-6, K_space)
-        plot_fill_region_quad(ax, Elist, ddt_day1, ddt_day30, ddt1, ddt30)
+        fillregion_y = np.minimum(d_exp, dday_fill)
         
-        omega_over_m_dt = omegaoverm_noscreen(dt, R)
-        omega_over_m_day = omegaoverm_noscreen(DAY_TO_SEC, R)
-        plot_time_labels(ax, m, omega_over_m_dt, omega_over_m_day, 'quad')
+        plot_fill_region_quad(ax, Elist, dday1, dday30, ddt1, ddt30)
+        plot_time_labels(ax, m, wm_dt, wm_day, 'quad')
         
-    plot_fill_region(ax, fillregion_x, fillregion_y, coupling)
+    plot_fill_region(ax, fillregion_x, fillregion_y, coupling_fill)
     plot_parameter_list(ax, i, j, coupling_type, 'quad', filename)
 
 def plots(R, Etot, coupling_type, coupling_order):
@@ -563,10 +539,36 @@ def plots(R, Etot, coupling_type, coupling_order):
             
             setup_axes(axij, formatter, coupling_order)
             
+            rho, rescaling_factor = signal_duration(Etot, m, Elist, t, R, 1)
+            
+            wm_dt = omegaoverm_noscreen(dt, R)
+            wm_day = omegaoverm_noscreen(DAY_TO_SEC, R)
+            
             if coupling_order == 'linear':
-                linear_plot(axij, i, j, Etot, m, Elist, t, R, eta, dt, Microscope_m, FifthForce_m, E_unc, m_bench, wmp_contour, K_space, coupling_type, filename)
+                coupling = d_probe(Elist, rho, rescaling_factor, eta, 1)
+                
+                Dg = 30e-6
+                dday30 = d2_from_delta_t(DAY_TO_SEC, R, m, Elist, Dg, K_space)  # NOTE - is there a d1_from_delta_t and shouldn't that be used here?
+                ddt30 = d2_from_delta_t(dt, R, m, Elist, Dg, K_space)
+                
+                linear_plot(axij, i, j, coupling, m, Elist, t, dday30, ddt30, wm_dt, wm_day, Microscope_m, FifthForce_m, E_unc, m_bench, wmp_contour, coupling_type, filename)
+                
             elif coupling_order == 'quad':
-                quad_plot(axij, i, j, Etot, m, Elist, t, R, eta, dt, E_unc, m_bench, wmp_contour, K_E, K_atm, K_space, coupling_type, filename)
+                coupling = d_probe(Elist, rho, rescaling_factor, eta, 2)
+
+                d_screen_earth = d2_screen(Elist, R_E, RHO_E, m, K_E)
+                d_screen_atm = d2_screen(Elist, R_ATM, RHO_ATM, m, K_atm)
+                d_screen_exp = d2_screen(Elist, R_EXP, RHO_EXP, m, K_E)
+                
+                Dg = 1e-6
+                dday1 = d2_from_delta_t(DAY_TO_SEC, R, m, Elist, Dg, K_space)
+                ddt1 = d2_from_delta_t(dt, R, m, Elist, Dg, K_space)
+                
+                Dg = 30e-6
+                dday30 = d2_from_delta_t(DAY_TO_SEC, R, m, Elist, Dg, K_space)
+                ddt30 = d2_from_delta_t(dt, R, m, Elist, Dg, K_space)
+                
+                quad_plot(axij, i, j, coupling, m, Elist, d_screen_earth, d_screen_exp, d_screen_atm, dday1, ddt1, dday30, ddt30, wm_dt, wm_day, R, E_unc, m_bench, wmp_contour, K_E, K_atm, coupling_type, filename)
 
             # Subplot axis labels
             ax[0,j].set_title(r'$\log_{10}(m_{\phi}/{\rm eV}) = $'+str(int(np.log10(mass[0][j]))), pad = 20)
