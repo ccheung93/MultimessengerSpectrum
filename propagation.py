@@ -156,7 +156,8 @@ def d2_from_delta_t(dt, L, m, E, Dg, K):
         float: value of quadratic dilatonic coupling from a time delay
     """
     # Galaxy number density [galaxies / Gpc^3]
-    ng = 0.006e9 * (L**3)/(GPC_TO_PC**3)
+    number_density = 0.006e9
+    Ng = number_density * (L/GPC_TO_PC)**3
     
     prefactor = PLANCK_MASS_EV**2/(8*PI)
     L_meters = L * PC_TO_METERS
@@ -179,7 +180,12 @@ def d2_from_delta_t(dt, L, m, E, Dg, K):
         k1 = np.array([
             ((2*E[i]**2*dt_c)/L_meters) - m**2 for i in range(len(E))
         ])
-        k3 = 1/((ng**(1/3) + 1)*Dg*RHO_ISM*K + (1-(ng**(1/3)+1)*Dg)*RHO_IGM*K)  # NOTE - first and third terms in denom. have units [L*eV^4]
+        #k3 = 1/((Ng**(1/3) + 1)*Dg/L*RHO_ISM*K + (1-((Ng**(1/3)+1)*Dg)/L)*RHO_IGM*K)
+        k3 = 1/((Ng**(1/3) + 1)*Dg*RHO_ISM*K + (1-((Ng**(1/3)+1)*Dg))*RHO_IGM*K) 
+        # NOTE - first and third terms in denom. have units [L*eV^4]
+        # (1-(ng^(1/3)+1))
+        #              ^-- +1 "going through milky way"
+        #       ^ galaxy linear number density
         d = prefactor*k3*k1
     return d
 
