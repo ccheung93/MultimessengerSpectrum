@@ -1,12 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from matplotlib import rcParams
-rcParams['font.family'] = 'sans-serif'
-rcParams['font.sans-serif'] = ['Computer Modern sans serif']
-
 from matplotlib.ticker import FuncFormatter
 import time
-usetex: True
 
 from propagation import *
 from limits import *
@@ -480,7 +475,7 @@ def quad_plot(ax, i, j, coupling, m, Elist, d_screen_earth, d_screen_exp, d_scre
     plot_fill_region(ax, fillregion_x, fillregion_y, coupling_fill)
     plot_parameter_list(ax, i, j, coupling_type, 'quad', filename)
 
-def plots(R, Etot, coupling_type, coupling_order):
+def plots(R, Etot, coupling_type, coupling_order, save_plots=True, show_plots=True):
     """Generate dilatonic coupling plots 
 
     Args:
@@ -582,7 +577,8 @@ def plots(R, Etot, coupling_type, coupling_order):
     shadowaxes.xaxis.labelpad=50
     shadowaxes.yaxis.labelpad=50
     
-    plt.savefig(filename,dpi = 1500)
+    if save_plots: plt.savefig(filename,dpi = 1500)
+    if show_plots: plt.show()
     
     
 if __name__ == "__main__":
