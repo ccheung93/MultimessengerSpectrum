@@ -94,14 +94,15 @@ def signal_duration(Etot, mass, energies, burst_duration, distance_pc, aw, integ
     q = energies/mass
     distance_inev = distance_pc/INEV_TO_PC
     tau_star = 2*PI/dw + 2*PI*distance_inev/(q**3 * mass * burst_duration)
-    tau_DM = 2*PI/(energies*AVG_VEL_DM**2)
+    mass_DM = energies
+    tau_DM = 2*PI/(mass_DM*AVG_VEL_DM**2)
     
     # Compute rescaling factor (fraction in Eq. 46 in arXiv:2502.08716v1)
     rescaling_factor = [
-        (t_int_DM[i]**(1/4)) * min(tau_DM[i]**(1/4), t_int_DM[i]**(1/4))/
-        (min(signal_duration[i]**(1/4), t_int[i]**(1/4)) * min(tau_star[i]**(1/4), t_int[i]**(1/4))) 
-        for i in range(len(energies))]
-    
+        (t_dm**(1/4)) * min(tau_dm**(1/4), t_dm**(1/4)) /
+        (min(sig_dur**(1/4), t_i**(1/4)) * min(tau_s**(1/4), t_i**(1/4)))
+        for t_dm, tau_dm, sig_dur, t_i, tau_s in zip(t_int_DM, tau_DM, signal_duration, t_int, tau_star)
+    ]
     return rho, rescaling_factor
 
 def d_probe(w, rho, rescaling_factor, eta, order):
@@ -140,13 +141,13 @@ def d_from_Lambda(Lambda, order):
     d = ((1/np.sqrt(4*PI))*(PLANCK_MASS_EV/Lambda))**order
     return d
 
-def d2_from_delta_t(dt, L, m, E, Dg, K):
+def d2_from_delta_t(dt, R, m, E, Dg, K):
     """ Calculate value of quadratic dilatonic coupling from a time delay 
         (calculates d_i^(2) from Eq.39 in arXiv:2502.08716v1)
     
     Args:
         dt (float): time delay [s]
-        L (float): propagation distance [pc]
+        R (float): propagation distance [pc]
         m (float): mass of phi [eV]
         E (array of floats): energies [eV]
         Dg (float): distance per galaxy of signal propagation [pc]
@@ -157,10 +158,10 @@ def d2_from_delta_t(dt, L, m, E, Dg, K):
     """
     # Galaxy number density [galaxies / Gpc^3]
     number_density = 0.006e9
-    Ng = number_density * (L/GPC_TO_PC)**3
+    Ng = number_density * (R/GPC_TO_PC)**3
     
     prefactor = PLANCK_MASS_EV**2/(8*PI)
-    L_meters = L * PC_TO_METERS
+    R_meters = R * PC_TO_METERS
     dt_c = dt * SPEED_OF_LIGHT
     
     # ISM regime:
@@ -168,26 +169,19 @@ def d2_from_delta_t(dt, L, m, E, Dg, K):
     # d2 = -------------- [ E^2 ( 1 - ------------ ) - m^2 ]
     #       8*pi*rho_ISM               (1+dt/R)^2
     #
-    if L < 1e5:
-        d = np.array([
-            (((E[i]**2)*(1 - (1/(dt_c/L_meters + 1)**2)) - m**2)/(8*PI*RHO_ISM*K))*(PLANCK_MASS_EV**2) for i in range(len(E))
-        ])
+    if R < 1e5:
+        d2 = prefactor * (E**2*(1 - 1/(1 + dt_c/R_meters)**2) - m**2)/(RHO_ISM*K)
     # ISM+IGM regime:
-    #
-    # d2 = 
+    #          M_pl^2                     2E^2*dt/R - m^2
+    # d2 = -------------- [ -------------------------------------------- ]
+    #           8*pi         Ng*(Dg/R)*rho_ISM + (1-Ng*(Dg/R))*rho_IGM
     #
     else:
-        k1 = np.array([
-            ((2*E[i]**2*dt_c)/L_meters) - m**2 for i in range(len(E))
-        ])
-        #k3 = 1/((Ng**(1/3) + 1)*Dg/L*RHO_ISM*K + (1-((Ng**(1/3)+1)*Dg)/L)*RHO_IGM*K)
-        k3 = 1/((Ng**(1/3) + 1)*Dg*RHO_ISM*K + (1-((Ng**(1/3)+1)*Dg))*RHO_IGM*K) 
-        # NOTE - first and third terms in denom. have units [L*eV^4]
-        # (1-(ng^(1/3)+1))
-        #              ^-- +1 "going through milky way"
-        #       ^ galaxy linear number density
-        d = prefactor*k3*k1
-    return d
+        Ng_eff = Ng**(1/3) + 1
+        numer = 2*E**2*dt_c/R_meters - m**2
+        denom = Ng_eff*Dg/R*RHO_ISM*K + (1-(Ng_eff*Dg/R))*RHO_IGM*K
+        d2 = prefactor * numer / denom
+    return d2
 
 def omegaoverm_noscreen(dt, L):#
     """ Returns omega/m without screening (beta(x) = 0)
@@ -211,7 +205,7 @@ def d2_screen(E, R, rho, m, K):
     
     Args:
         E (array of floats): energies [eV]
-        R (float): distance [pc]
+        R (float): length scale [1/eV]
         rho (float): energy density [eV^4]
         m (float): mass of phi [eV]
         K (float): energy density fraction [unitless]
@@ -219,7 +213,7 @@ def d2_screen(E, R, rho, m, K):
     Returns:
         float: critical value of quadratic dilatonic coupling
     """
-    d = PLANCK_MASS_EV**2 / (8*PI*rho*K) * (1/R**2 + E**2 - m**2) # NOTE - should R -> 2R?
+    d = PLANCK_MASS_EV**2 / (8*PI*rho*K) * (1/(2*R)**2 + E**2 - m**2)
     return d
 
 def E_from_uncert(burst_duration):

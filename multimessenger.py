@@ -542,7 +542,7 @@ def plots(R, Etot, coupling_type, coupling_order, save_plots=True, show_plots=Tr
             if coupling_order == 'linear':
                 coupling = d_probe(Elist, rho, rescaling_factor, eta, 1)
                 
-                Dg = 30e-6
+                Dg = 30e3
                 dday30 = d2_from_delta_t(DAY_TO_SEC, R, m, Elist, Dg, K_space)  # NOTE - is there a d1_from_delta_t and shouldn't that be used here?
                 ddt30 = d2_from_delta_t(dt, R, m, Elist, Dg, K_space)
                 
@@ -555,11 +555,11 @@ def plots(R, Etot, coupling_type, coupling_order, save_plots=True, show_plots=Tr
                 d_screen_atm = d2_screen(Elist, R_ATM, RHO_ATM, m, K_atm)
                 d_screen_exp = d2_screen(Elist, R_EXP, RHO_EXP, m, K_E)
                 
-                Dg = 1e-6
+                Dg = 1e3
                 dday1 = d2_from_delta_t(DAY_TO_SEC, R, m, Elist, Dg, K_space)
                 ddt1 = d2_from_delta_t(dt, R, m, Elist, Dg, K_space)
                 
-                Dg = 30e-6
+                Dg = 30e3
                 dday30 = d2_from_delta_t(DAY_TO_SEC, R, m, Elist, Dg, K_space)
                 ddt30 = d2_from_delta_t(dt, R, m, Elist, Dg, K_space)
                 
