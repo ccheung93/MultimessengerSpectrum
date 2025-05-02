@@ -5,6 +5,7 @@ import time
 
 from propagation import *
 from limits import *
+from plots import *
 
 COLORLIST = ["tab:red", "tab:orange", "tab:purple"]
 
@@ -73,51 +74,6 @@ def get_K_params(coupling_type, coupling_order):
             
     return K_space, K_E, K_atm, eta, ylabel
 
-def setup_axes(ax, formatter, coupling_order):
-    """ Set up axes for subplot (i, j) """
-    ax.xaxis.set_major_formatter(formatter)
-    ax.yaxis.set_major_formatter(formatter)
-    ax.set_xticks(np.logspace(-20,-6,7))
-    ax.set_xlim(.3e-20,0.9e-6)
-    if coupling_order == 'linear': 
-        ax.set_ylim(1e-9,0.9e0)
-    ax.tick_params(direction="in")
-    
-def plot_MICROSCOPE(ax, Elist, Microscope_m):
-    """ Plot MICROSCOPE EP violation limits """
-    ax.plot(Elist, Microscope_m, color = 'gray', linewidth = 2)
-    ax.fill_between(Elist, Microscope_m, [1e50 for i in range(len(Elist))], color = 'gray', alpha = 0.1)
-    ax.text(3.5e-11, Microscope_m[0]*1.3, r'${\rm MICROSCOPE}$', color = 'k')
-
-def plot_FifthForce(ax, t, Elist, E_unc, FifthForce_m):
-    """ Plot fifth-force limits """
-    ax.plot(Elist, FifthForce_m)
-    ax.plot([E_unc, E_unc], [1e50, 1e-50], color = 'chocolate', linestyle = '--')
-    ax.fill_between([1e-50, E_unc], [1e-50, 1e-50], [1e50, 1e50], color = 'chocolate', alpha = 0.1)
-
-def plot_coupling(ax, m, coupling, m_bench, wmp_contour, coupling_order):
-    """ Plot coupling limits """
-    if coupling_order == "linear":
-        min_y = 1e-50
-    elif coupling_order == "quad":
-        min_y = 1e-10
-    
-    ax.plot(m_bench*wmp_contour, coupling, c = 'k', linewidth = 2, alpha = 1)
-    ax.plot([m, m], [min_y, 1e50], c = 'k', linestyle = '--')
-    ax.fill_between([1e-30, m], min_y, 1e50, facecolor = 'none', hatch = "/", edgecolor = 'k', alpha = 0.3)
-
-def plot_d_from_delta_t(ax, Elist, dday, ddt):
-    ax.plot(Elist, dday, color = COLORLIST[2], linewidth = 2, linestyle = '--'  )
-    ax.plot(Elist, ddt, color = COLORLIST[0], linewidth = 2, linestyle = '--'  )
-
-def plot_fill_region(ax, fillregion_x, fillregion_y, coupling):
-    """ Shade the region between the curves fillregion_y and coupling over the x-axis values in fillregion_x where coupling < fillregion_y """
-    ax.fill_between(fillregion_x, coupling, fillregion_y, where = coupling < fillregion_y, color = 'tab:green',alpha = 0.3)
-
-def plot_fill_region_quad(ax, Elist, ddt_day1, ddt_day30, ddt1, ddt30):
-    ax.fill_between(Elist, ddt_day1, ddt_day30, color = COLORLIST[2], alpha = 0.1)
-    ax.fill_between(Elist, ddt1, ddt30, color = COLORLIST[0], alpha = 0.1)
-
 def plot_time_labels(ax, m, omega_over_m_dt, omega_over_m_day, coupling_order):
     bbox_style = lambda color: dict(facecolor = 'white', alpha = 1, edgecolor = color, boxstyle = 'round,pad=.1')
     
@@ -147,31 +103,6 @@ def plot_time_labels(ax, m, omega_over_m_dt, omega_over_m_day, coupling_order):
         pos_y = pos_y_coupling[coupling_order]
         txt = label["txt"]
         ax.text(pos_x, pos_y, txt, rotation = 90, fontsize = 25, color = label["color"], bbox = bbox_style(label["color"]))
-        
-def plot_couplings_screened(ax, Elist, d_earth, d_exp, d_atm):
-    ax.fill_between(Elist, d_earth, 1e100, color = 'tab:blue', alpha = .05)
-    ax.plot(Elist, d_atm, color = 'tab:blue', linestyle = 'dashed')
-    ax.plot(Elist, d_exp, color = 'tab:blue', linestyle = 'dotted')
-    ax.plot(Elist, d_earth, color = 'tab:blue', linewidth = 3)
-
-def plot_E_unc(ax, E_unc):
-    ax.plot([E_unc, E_unc], [1e50, 1e-50], color = 'chocolate', linestyle = '--')
-    ax.fill_between([1e-50, E_unc], [1e-50, 1e-50], [1e50, 1e50], color = 'chocolate', alpha = 0.1)
-
-def label_omega_lt_mass(ax, m, coupling_order):
-    # Label region in parameter space where omega < scalar field mass
-    if m > 1e-20:
-        pos_x = m/200
-        pos_y = {
-            "linear": 1e-7,
-            "quad": 1e12
-        }
-        txt = r'$\omega<m_{\phi}$'
-        bbox_style = dict(facecolor = 'whitesmoke',
-                          alpha = 1,
-                          edgecolor = 'k',
-                          boxstyle = 'round,pad=.1')
-        ax.text(pos_x, pos_y[coupling_order], txt, color = 'k', bbox = bbox_style)
 
 def plot_supernova(ax, Elist, coupling_type):
     supernova_config = {
@@ -298,35 +229,8 @@ def plot_parameter_list(ax, i, j, coupling_type, coupling_order, filename):
             txt = parameter_list[coupling_type][prefix] + '\n' + eta_DM[coupling_type]
             ax.text(*pos, txt, bbox = bbox_style)
 
-def add_label(ax, x, y, txt, rotation = 0, fontsize = 25, 
-              color = 'black', edgecolor = 'black', facecolor = 'white', 
-              alpha = 1 , boxstyle = 'round,pad=0.1'):
-    """Adds a text box label at position (x, y)
-    
-    Args:
-        ax (): matplotlib axis
-        x, y (float): coordinates to place label
-        rotation (float): angle in degrees to rotate
-        fontsize (int): font size
-        color (str): color
-        edgecolor (str): box edge color
-        facecolor (str): box fill color
-        alpha (float): box transparency
-        boxstyle (str): box style
-    """
-    ax.text(x, y, txt, 
-            rotation = rotation, 
-            fontsize = fontsize,
-            color = color,
-            bbox=dict(facecolor = facecolor,
-                      alpha = alpha,
-                      edgecolor = edgecolor,
-                      boxstyle = boxstyle
-                      )
-            )
-
-def plot_critical_screening(ax, K_E, K_atm, coupling_type, filename):
-    """ Plot critical screening lines """
+def label_critical_screening(ax, K_E, K_atm, coupling_type, filename):
+    """ Label critical screening lines """
     distance_scales = ["10Mpc_", "10kpc_"]
     
     # Define labels for critical screening
@@ -398,20 +302,14 @@ def plot_critical_screening(ax, K_E, K_atm, coupling_type, filename):
             ax.text(*pos["atm"], lbl["atm"], fontsize = 35, color = 'tab:blue')
             ax.text(*pos["exp"], lbl["exp"], fontsize = 35, color = 'tab:blue')
 
-def load_linear_constraints(Elist):
-    Microscope_x, Microscope_y = load_external_limits('Linear Scalar Photon/MICROSCOPE.txt')
-    FifthForce_x, FifthForce_y = load_external_limits('Linear Scalar Photon/FifthForce.txt')
-    Microscope_m = [Microscope_y[0]] * len(Elist)    
-    FifthForce_m = [FifthForce_y[0]] * len(Elist)
-    
-    return Microscope_m, FifthForce_m
-
 def linear_plot(ax, i, j, coupling, m, Elist, t, dday, ddt, wm_dt, wm_day, Microscope_m, FifthForce_m, E_unc, m_bench, wmp_contour, coupling_type, filename):
     """ Plots for linear coupling_order """
 
     plot_MICROSCOPE(ax, Elist, Microscope_m)
-    plot_FifthForce(ax, t, Elist, E_unc, FifthForce_m)
-    plot_coupling(ax, m, coupling, m_bench, wmp_contour, 'linear')
+    plot_E_unc(ax, E_unc)
+    plot_FifthForce(ax, Elist, FifthForce_m)
+    plot_coupling(ax, m_bench, coupling, wmp_contour)
+    plot_mass_exclusion(ax, m, 'linear')
     label_omega_lt_mass(ax, m, 'linear')
     
     condition_mask = (Elist > E_unc) & (Elist > m * wm_day)
@@ -429,9 +327,10 @@ def linear_plot(ax, i, j, coupling, m, Elist, t, dday, ddt, wm_dt, wm_day, Micro
 def quad_plot(ax, i, j, coupling, m, Elist, d_screen_earth, d_screen_exp, d_screen_atm, dday1, ddt1, dday30, ddt30, wm_dt, wm_day, R, E_unc, m_bench, wmp_contour, K_E, K_atm, coupling_type, filename):
     """ Plots for quadratic coupling_order """
     
-    plot_couplings_screened(ax, Elist, d_screen_earth, d_screen_exp, d_screen_atm)
+    plot_crit_couplings(ax, Elist, d_screen_earth, d_screen_exp, d_screen_atm)
     plot_E_unc(ax, E_unc)
-    plot_coupling(ax, m, coupling, m_bench, wmp_contour, 'quad')
+    plot_coupling(ax, m_bench, coupling, wmp_contour)
+    plot_mass_exclusion(ax, m, 'quad')
     label_omega_lt_mass(ax, m, 'quad')
     
     plot_d_from_delta_t(ax, Elist, dday30, ddt30)
@@ -442,7 +341,7 @@ def quad_plot(ax, i, j, coupling, m, Elist, d_screen_earth, d_screen_exp, d_scre
     d_exp = d_screen_exp[condition_mask]
     
     plot_supernova(ax, Elist, coupling_type)
-    plot_critical_screening(ax, K_E, K_atm, coupling_type, filename)
+    label_critical_screening(ax, K_E, K_atm, coupling_type, filename)
     
     if R < 1e5:
         dday30_fill = dday30[condition_mask]
@@ -466,10 +365,9 @@ def quad_plot(ax, i, j, coupling, m, Elist, d_screen_earth, d_screen_exp, d_scre
         plot_d_from_delta_t(ax, Elist, dday1, ddt1)
     
         dday_fill = dday1[condition_mask]
-        
         fillregion_y = np.minimum(d_exp, dday_fill)
         
-        plot_fill_region_quad(ax, Elist, dday1, dday30, ddt1, ddt30)
+        plot_fill_d_from_delta_t(ax, Elist, dday1, dday30, ddt1, ddt30)
         plot_time_labels(ax, m, wm_dt, wm_day, 'quad')
         
     plot_fill_region(ax, fillregion_x, fillregion_y, coupling_fill)
