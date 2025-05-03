@@ -18,7 +18,7 @@ def add_label(ax, x, y, txt, rotation = 0, fontsize = 25,
     """Adds a text box label at position (x, y)
     
     Args:
-        ax (): matplotlib axis
+        ax (matplotlib.axes.Axes): the plot to add label to
         x, y (float): coordinates to place label
         rotation (float): angle in degrees to rotate
         fontsize (int): font size
@@ -103,17 +103,18 @@ def plot_mass_exclusion(ax, m, coupling_order):
         min_y = 1e-10 # NOTE - how is this decided?
     ax.fill_between([1e-30, m], min_y, 1e50, facecolor = 'none', hatch = "/", edgecolor = 'k', alpha = 0.3)
     
-def label_omega_lt_mass(ax, m, coupling_order):
+def label_mass_exclusion(ax, m, coupling_order):
     """ Label region in parameter space where omega < scalar field mass """
-    if m > 1e-20:
-        pos_x = m/200
-        pos_y = {
-            "linear": 1e-7,
-            "quad": 1e12
-        }
-        txt = r'$\omega<m_{\phi}$'
-        bbox_style = dict(facecolor = 'whitesmoke',
-                          alpha = 1,
-                          edgecolor = 'k',
-                          boxstyle = 'round,pad=.1')
-        ax.text(pos_x, pos_y[coupling_order], txt, color = 'k', bbox = bbox_style)
+    if m <= 1e-20: return
+    
+    pos_x = m/200
+    pos_y = {
+        "linear": 1e-7,
+        "quad": 1e12
+    }
+    txt = r'$\omega<m_{\phi}$'
+    bbox_style = dict(facecolor = 'whitesmoke',
+                      alpha = 1,
+                      edgecolor = 'k',
+                      boxstyle = 'round,pad=.1')
+    ax.text(pos_x, pos_y[coupling_order], txt, color = 'k', bbox = bbox_style)

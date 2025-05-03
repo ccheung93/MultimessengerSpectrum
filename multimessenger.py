@@ -310,7 +310,7 @@ def linear_plot(ax, i, j, coupling, m, Elist, t, dday, ddt, wm_dt, wm_day, Micro
     plot_FifthForce(ax, Elist, FifthForce_m)
     plot_coupling(ax, m_bench, coupling, wmp_contour)
     plot_mass_exclusion(ax, m, 'linear')
-    label_omega_lt_mass(ax, m, 'linear')
+    label_mass_exclusion(ax, m, 'linear')
     
     condition_mask = (Elist > E_unc) & (Elist > m * wm_day)
     fillregion_x = Elist[condition_mask]
@@ -331,7 +331,7 @@ def quad_plot(ax, i, j, coupling, m, Elist, d_screen_earth, d_screen_exp, d_scre
     plot_E_unc(ax, E_unc)
     plot_coupling(ax, m_bench, coupling, wmp_contour)
     plot_mass_exclusion(ax, m, 'quad')
-    label_omega_lt_mass(ax, m, 'quad')
+    label_mass_exclusion(ax, m, 'quad')
     
     plot_d_from_delta_t(ax, Elist, dday30, ddt30)
     
