@@ -191,7 +191,7 @@ def plots(R, Etot, coupling_type, coupling_order, save_plots=True, show_plots=Tr
 
     Args:
         R (float): distance between the source and the experiment
-        Etot (float): total energy of the burst
+        Etot (float): total energy of the burst [M_sun]
         coupling_type (str): type of coupling ('photon', 'electron' or 'gluon')
         coupling_order (str): coupling order ('linear' or 'quadratic')
     """
@@ -213,6 +213,7 @@ def plots(R, Etot, coupling_type, coupling_order, save_plots=True, show_plots=Tr
     wmp_contour = np.logspace(0,30,1000)
     dt = 1 * 3.154e7 
     Elist = mass[0][0]*wmp_contour
+    Etot = Etot * SOLAR_TO_EV
 
     K_space, K_E, K_atm, eta, ylabel = get_K_params(coupling_type, coupling_order)
 

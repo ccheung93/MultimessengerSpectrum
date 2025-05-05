@@ -6,13 +6,14 @@ HBAR = 6.528e-16                           # reduced Planck constant in eV*s
 
 INEV_TO_METERS = 1.97e-7                   # eV^-1 to meters
 PC_TO_METERS = 3.086e16                    # parsecs to meters
-INEV_TO_PC = INEV_TO_METERS/PC_TO_METERS   # eV^-1 to parsecs
-MASS_SUN_KG = 2e30                         # mass of the sun in kg
+PC_TO_INEV = PC_TO_METERS/INEV_TO_METERS   # parsecs to 1/eV
 EV_TO_JOULES = 1.6e-19                     # eV to joules
 EV_TO_KG = EV_TO_JOULES/SPEED_OF_LIGHT**2  # eV to kg
-EV_TO_SOLAR = EV_TO_KG/MASS_SUN_KG         # eV to solar mass
 
-SEC_TO_INEV = 1/HBAR                       # 1 second to eV^-1
+MASS_SUN_KG = 2e30                         # mass of the sun in kg
+SOLAR_TO_EV = MASS_SUN_KG/EV_TO_KG         # eV to solar mass
+
+SEC_TO_INEV = 1/HBAR                       # 1 second to 1/eV
 
 DAY_TO_SEC = 60*60*24                      # number of seconds in 1 day
 YEAR_TO_SEC = 365*DAY_TO_SEC               # number of seconds in 1 year
@@ -39,15 +40,15 @@ R_EXP = 1 * METERS_TO_INEV
 
 PI = np.pi 
 
-def signal_duration(Etot, mass, energies, burst_duration, distance_pc, aw, integration_time=1): 
-    """ Calculate the duration of the signal 
+def signal_duration(Etot, m_phi, energies, burst_duration, distance, aw, integration_time=1): 
+    """ Calculate the energy density of phi at the Earth and rescaling factor calculated for an array of signal durations
     
     Args:
         Etot (float): total energy of emitted phi particles from the source [eV]
-        mass (float): mass of phi field [eV]
+        m_phi (float): mass of phi field [eV]
         energies (array_like): array of individual particle energies [eV]
         burst_duration (float): t_star, the duration of the burst emission at the source [s]
-        distance_pc (float): distance between source and detector [pc]
+        distance (float): distance between source and detector [pc]
         aw (float): wavepacket uncertainty parameter based on uncertainty principle:
                     dw * t_star >= 1, where dw = spread in energies and t_star = burst_duration
                     for a given wavepacket, aw = dw * t_star, where aw >= 1
@@ -55,55 +56,113 @@ def signal_duration(Etot, mass, energies, burst_duration, distance_pc, aw, integ
         integration_time (float): integration time [days], default = 1 day
 
     Returns:
-        rho (float) - energy density of phi at Earth [eV^4]
-        rescaling_factor (list of float) - rescaling factors for each energy [unitless]
+        rho (float): energy density of phi at Earth [eV^4]
+        rescaling_factor (array_like): rescaling factors for each energy [unitless]
     """ 
-    # Convert integration time to seconds and then to inverse eV
-    integration_time_s = integration_time * DAY_TO_SEC
-    t_int = np.full_like(energies, integration_time_s * SEC_TO_INEV)
+    # Convert to proper units
+    t_star = burst_duration*SEC_TO_INEV
+    R = distance*PC_TO_INEV
     
-    # Set integration time for dark matter experiment
-    integration_time_DM_s = 1e6
-    t_int_DM = np.full_like(energies, integration_time_DM_s * SEC_TO_INEV)
-    
-    # Inverse-square law (1/4*pi*R^2) with a unit conversion
-    rm2 = 1/(4*PI*(distance_pc/INEV_TO_PC)**2)
-    
-    # Spread in energies from uncertainty principle: dw * t_star = aw -> dw = aw / t_star
-    dw = aw/(burst_duration*SEC_TO_INEV)
-    
-    # Physical size of the phi wave at the source, assuming it's traveling at c = 1.
-    dx_burst = burst_duration*SEC_TO_INEV 
-    
-    # Spread of the phi wave during propagation
-    dx_spread = (dw/energies)*(mass**2/energies**2)*(distance_pc/INEV_TO_PC)
-    
-    # Total spread of the wavepacket
-    dx = dx_burst + dx_spread
-    
-    # Energy density of phi at Earth
-    rho = (Etot/EV_TO_SOLAR)*rm2/dx
-
-    # Calculate t_star_tilde, the signal duration at Earth
-    burst_duration = burst_duration*SEC_TO_INEV
-    signal_duration = np.sqrt(burst_duration**2 + dx_spread**2)
-    
-    # Calculate coherence times
-    # tau_star = 2*pi/dw + (2*pi*R)/(q^3*m*t_star)
-    # tau_DM = 2*pi/mv^2
-    q = energies/mass
-    distance_inev = distance_pc/INEV_TO_PC
-    tau_star = 2*PI/dw + 2*PI*distance_inev/(q**3 * mass * burst_duration)
-    mass_DM = energies
-    tau_DM = 2*PI/(mass_DM*AVG_VEL_DM**2)
+    # Compute energy density of phi at Earth
+    rho = calc_rho(Etot, m_phi, energies, t_star, R, aw)
     
     # Compute rescaling factor (fraction in Eq. 46 in arXiv:2502.08716v1)
+    rescaling_factor = calc_rescaling_factor(m_phi, energies, t_star, R, aw, integration_time)
+    
+    return rho, rescaling_factor
+
+def calc_rescaling_factor(m_phi, w, t_star, R, aw, integration_time=1):
+    """ Calculate rescaling factor (Eq. 46 in arXiv:2502.08716v1)
+                    t_int_DM^(1/4) * min(tau_DM^(1/4), t_int_DM^(1/4))
+    rf = -----------------------------------------------------------------------------
+            min(sig_dur^(1/4), t_int^(1/4)) * min(tau_star^(1/4), t_int_star^(1/4))
+    Args:
+        m_phi (float): mass of phi field [eV]
+        w (array_like): array of individual particle energies [eV]
+        burst_duration (float): the duration of the burst emission at the source [1/eV]
+        R (float): distance between source and detector [1/eV]
+        aw (float): wavepacket uncertainty parameter based on uncertainty principle:
+                    dw * t_star >= 1, where dw = spread in energies and t_star = burst_duration
+                    for a given wavepacket, aw = dw * t_star, where aw >= 1
+                    aw = 1 corresponds to a Gaussian wavepacket, since it has minimum uncertainty
+        integration_time (float): integration time [days], default = 1 day
+
+    Returns:
+        array_like: array of rescaling factors calculated for each signal duration [unitless]
+    """
+    # Convert integration time to seconds and then to inverse eV
+    integration_time_s = integration_time * DAY_TO_SEC
+    t_int = np.full_like(w, integration_time_s * SEC_TO_INEV)
+    
+    # Set integration time in seconds for dark matter experiment
+    integration_time_DM_s = 1e6
+    t_int_DM = np.full_like(w, integration_time_DM_s * SEC_TO_INEV)
+    
+    # Spread in energies from uncertainty principle: dw * t_star = aw -> dw = aw / t_star
+    dw = aw/t_star
+    
+    # Spread of the phi wave during propagation
+    q = w/m_phi
+    dx_spread = (dw/w)*(R/q**2)
+    
+    # Calculate t_star_tilde, the signal duration at Earth (Eq. 43)
+    signal_duration = np.sqrt(t_star**2 + dx_spread**2)
+    
+    # Calculate effective coherence time observed by the detector (Eq. 40)
+    #              2*pi          2*pi*R
+    # tau_star = -------- + ----------------
+    #               dw        q^3*m*t_star
+    tau_star = 2*PI/dw + 2*PI*R/(q**3 * m_phi * t_star)
+    
+    # Calculate coherence times for non-relativistic, ambient DM (Eq. 46)
+    #            2*pi
+    # tau_DM = ----------, m_DM = w
+    #           m_DM*v^2
+    mass_DM = w
+    tau_DM = 2*PI/(mass_DM*AVG_VEL_DM**2)
+    
     rescaling_factor = [
         (t_dm**(1/4)) * min(tau_dm**(1/4), t_dm**(1/4)) /
         (min(sig_dur**(1/4), t_i**(1/4)) * min(tau_s**(1/4), t_i**(1/4)))
         for t_dm, tau_dm, sig_dur, t_i, tau_s in zip(t_int_DM, tau_DM, signal_duration, t_int, tau_star)
     ]
-    return rho, rescaling_factor
+    
+    return rescaling_factor
+
+def calc_rho(Etot, m_phi, w, t_star, R, aw):
+    """ Calculate the energy density of phi at Earth in eV^4
+    
+    Args:
+        Etot (float): total energy of emitted phi particles from the source [eV]
+        m_phi (float): mass of phi field [eV]
+        energies (array_like): array of individual particle energies [eV]
+        t_star (float): the duration of the burst emission at the source [1/eV]
+        R (float): distance between source and detector [1/eV]
+        aw (float): wavepacket uncertainty parameter based on uncertainty principle:
+                    dw * t_star >= 1, where dw = spread in energies and t_star = burst_duration
+                    for a given wavepacket, aw = dw * t_star, where aw >= 1
+                    aw = 1 corresponds to a Gaussian wavepacket, since it has minimum uncertainty
+
+    Returns:
+        float: energy density of phi at Earth [eV^4]
+    """ 
+    # Spread in energies from uncertainty principle: dw * t_star = aw -> dw = aw / t_star
+    dw = aw/t_star
+    
+    # Physical size of the phi wave at the source, assuming it's traveling at c = 1.
+    dx_burst = t_star
+    
+    # Spread of the phi wave during propagation
+    q = w/m_phi
+    dx_spread = (dw/w)*(R/q**2)
+    
+    # Total spread of the wavepacket
+    dx = dx_burst + dx_spread
+    
+    # Energy density of phi at the detector location (Eq. 30)
+    rho = Etot/(4*PI*R**2*dx)
+    
+    return rho
 
 def d_probe(w, rho, rescaling_factor, eta, order):
     """ Calculate value of dilatonic coupling we can probe
