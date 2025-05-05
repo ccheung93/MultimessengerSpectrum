@@ -92,6 +92,29 @@ def plot_E_unc(ax, E_unc):
     ymax = 1e50
     ax.fill_betweenx([ymin, ymax], x1=ymin, x2=E_unc, color = 'chocolate', alpha = 0.1)
     
+def label_E_unc(ax, E_unc, filename):
+    """ Plot omega*t_star <~ 2*pi """
+    # Define lambda for bbox style
+    bbox_style = lambda color: dict(facecolor = 'white', alpha = 1, edgecolor = color, boxstyle = 'round,pad=.1')
+    
+    # Define plot configurations for relevant distance scales
+    distance_scale_config = {
+        "10Mpc_": {
+            "pos": (E_unc/200, 1e-1),
+            "txt": r'$E_{\rm tot} = M_{\odot}$'+'\n' + r'$R = 10~{\rm Mpc}$'
+        },
+        "10kpc_": {
+            "pos": (1e-20, 1e-2),
+            "txt": r'$E_{\rm tot} = 10^{-2} M_{\odot}$'+'\n' + r'$R = 10~{\rm kpc}$'
+        }
+    }
+    
+    for prefix, val in distance_scale_config.items():
+        if filename.startswith(prefix):
+            pos_x, pos_y = val["pos"]
+            txt = r'$\omega\,t_{*} \lesssim \, 2\pi$' # omega t_star <~ 2pi
+            ax.text(pos_x, pos_y, txt, color = 'tab:brown', bbox = bbox_style("chocolate"))
+    
 def plot_mass_exclusion(ax, m, coupling_order):
     """ Plot region excluded due to the scalar energy being less than its mass """
     ax.axvline(m, c = 'k', linestyle = '--')

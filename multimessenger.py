@@ -144,29 +144,6 @@ def plot_supernova(ax, Elist, coupling_type):
         ax.text(lbl_x, config["lbl_y"], config["txt"], fontsize = 30, color = 'black')
         ax.plot(Elist, config["line"], color = 'gray', linewidth = 3)
         ax.fill_between(Elist, config["line"], 1e100, color = 'gray', alpha = 0.1)
-
-def plot_omega_ts(ax, E_unc, filename):
-    """ Plot omega*t_star <~ 2*pi """
-    # Define lambda for bbox style
-    bbox_style = lambda color: dict(facecolor = 'white', alpha = 1, edgecolor = color, boxstyle = 'round,pad=.1')
-    
-    # Define plot configurations for relevant distance scales
-    distance_scale_config = {
-        "10Mpc_": {
-            "pos": (E_unc/200, 1e-1),
-            "txt": r'$E_{\rm tot} = M_{\odot}$'+'\n' + r'$R = 10~{\rm Mpc}$'
-        },
-        "10kpc_": {
-            "pos": (1e-20, 1e-2),
-            "txt": r'$E_{\rm tot} = 10^{-2} M_{\odot}$'+'\n' + r'$R = 10~{\rm kpc}$'
-        }
-    }
-    
-    for prefix, val in distance_scale_config.items():
-        if filename.startswith(prefix):
-            pos_x, pos_y = val["pos"]
-            txt = r'$\omega\,t_{*} \lesssim \, 2\pi$' # omega t_star <~ 2pi
-            ax.text(pos_x, pos_y, txt, color = 'tab:brown', bbox = bbox_style("chocolate"))
                 
 def plot_parameter_list(ax, i, j, coupling_type, coupling_order, filename):
     """ Plot parameter lists in bottom right plot """
@@ -321,7 +298,7 @@ def linear_plot(ax, i, j, coupling, m, Elist, t, dday, ddt, wm_dt, wm_day, Micro
     plot_d_from_delta_t(ax, Elist, dday, ddt)
     
     plot_time_labels(ax, m, wm_dt, wm_day, 'linear')
-    plot_omega_ts(ax, E_unc, filename)
+    label_E_unc(ax, E_unc, filename)
     plot_parameter_list(ax, i, j, coupling_type, 'linear', filename)
 
 def quad_plot(ax, i, j, coupling, m, Elist, d_screen_earth, d_screen_exp, d_screen_atm, dday1, ddt1, dday30, ddt30, wm_dt, wm_day, R, E_unc, m_bench, wmp_contour, K_E, K_atm, coupling_type, filename):
@@ -440,9 +417,8 @@ def plots(R, Etot, coupling_type, coupling_order, save_plots=True, show_plots=Tr
             if coupling_order == 'linear':
                 coupling = d_probe(Elist, rho, rescaling_factor, eta, 1)
                 
-                Dg = 30e3
-                dday30 = d2_from_delta_t(DAY_TO_SEC, R, m, Elist, Dg, K_space)  # NOTE - is there a d1_from_delta_t and shouldn't that be used here?
-                ddt30 = d2_from_delta_t(dt, R, m, Elist, Dg, K_space)
+                dday30 = d2_from_delta_t(DAY_TO_SEC, R, m, Elist, 30e3, K_space)
+                ddt30 = d2_from_delta_t(dt, R, m, Elist, 30e3, K_space)
                 
                 linear_plot(axij, i, j, coupling, m, Elist, t, dday30, ddt30, wm_dt, wm_day, Microscope_m, FifthForce_m, E_unc, m_bench, wmp_contour, coupling_type, filename)
                 
@@ -453,13 +429,11 @@ def plots(R, Etot, coupling_type, coupling_order, save_plots=True, show_plots=Tr
                 d_screen_atm = d2_screen(Elist, R_ATM, RHO_ATM, m, K_atm)
                 d_screen_exp = d2_screen(Elist, R_EXP, RHO_EXP, m, K_E)
                 
-                Dg = 1e3
-                dday1 = d2_from_delta_t(DAY_TO_SEC, R, m, Elist, Dg, K_space)
-                ddt1 = d2_from_delta_t(dt, R, m, Elist, Dg, K_space)
+                dday1 = d2_from_delta_t(DAY_TO_SEC, R, m, Elist, 1e3, K_space)
+                ddt1 = d2_from_delta_t(dt, R, m, Elist, 1e3, K_space)
                 
-                Dg = 30e3
-                dday30 = d2_from_delta_t(DAY_TO_SEC, R, m, Elist, Dg, K_space)
-                ddt30 = d2_from_delta_t(dt, R, m, Elist, Dg, K_space)
+                dday30 = d2_from_delta_t(DAY_TO_SEC, R, m, Elist, 30e3, K_space)
+                ddt30 = d2_from_delta_t(dt, R, m, Elist, 30e3, K_space)
                 
                 quad_plot(axij, i, j, coupling, m, Elist, d_screen_earth, d_screen_exp, d_screen_atm, dday1, ddt1, dday30, ddt30, wm_dt, wm_day, R, E_unc, m_bench, wmp_contour, K_E, K_atm, coupling_type, filename)
 
