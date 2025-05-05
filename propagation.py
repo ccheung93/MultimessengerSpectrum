@@ -183,22 +183,22 @@ def d2_from_delta_t(dt, R, m, E, Dg, K):
         d2 = prefactor * numer / denom
     return d2
 
-def omegaoverm_noscreen(dt, L):#
+def omegaoverm_noscreen(dt, R):#
     """ Returns omega/m without screening (beta(x) = 0)
-        omega           L+dt
+        omega           R+dt
         ----- = ---------------------
-          m     sqrt(2*L*dt + dt**2)
+          m     sqrt(2*R*dt + dt**2)
           
     Args:
         dt (float): time delay 
-        L (float): distance between source and detection
+        R (float): distance between source and detection
     
     Returns:
         omega_over_m (float): frequency to mass ratio
     """
-    L = L*PC_TO_METERS
-    dt = dt*SPEED_OF_LIGHT
-    return (L+dt)/(np.sqrt(dt * (2*L+dt)))
+    R = R * PC_TO_METERS
+    dt = dt * SPEED_OF_LIGHT
+    return (R + dt)/(np.sqrt(dt * (2*R+dt)))
 
 def d2_screen(E, R, rho, m, K):
     """ Calculate the critical values of the quadratic dilatonic coupling 
