@@ -65,6 +65,36 @@ def plot_fill_d_from_delta_t(ax, range_x, ddt_day1, ddt_day30, ddt1, ddt30):
     """ Shade in area between dilatonic coupling curves"""
     ax.fill_between(range_x, ddt_day1, ddt_day30, color = COLORLIST[2], alpha = 0.1)
     ax.fill_between(range_x, ddt1, ddt30, color = COLORLIST[0], alpha = 0.1)
+
+def label_d_from_delta_t(ax, m, omega_over_m_dt, omega_over_m_day, coupling_order):
+    bbox_style = lambda color: dict(facecolor = 'white', alpha = 1, edgecolor = color, boxstyle = 'round,pad=.1')
+    
+    # Define time labels 
+    time_labels = [
+        {
+            "omega_over_m": omega_over_m_dt, 
+            "color": "tab:red", 
+            "txt": r'$\delta t\, \gtrsim \, 1~{\rm yr}~ \uparrow $' # dt >~ 1 year
+            },
+        {
+            "omega_over_m": omega_over_m_day, 
+            "color": "tab:purple", 
+            "txt": r'$\delta t\, \gtrsim \, 1~{\rm day}~ \uparrow$' # dt >~ 1 day
+            }
+    ]
+    
+    # Define y positions of text box based on coupling_order
+    pos_y_coupling = {
+        "linear": 1e-7,
+        "quad": 1e16
+    }
+    
+    # Label regions in parameter space for each time label
+    for label in time_labels:
+        pos_x = m*label["omega_over_m"]/4
+        pos_y = pos_y_coupling[coupling_order]
+        txt = label["txt"]
+        ax.text(pos_x, pos_y, txt, rotation = 90, fontsize = 25, color = label["color"], bbox = bbox_style(label["color"]))
     
 def plot_fill_region(ax, fillregion_x, fillregion_y, coupling):
     """ Shade in the viable parameter space """
@@ -141,3 +171,137 @@ def label_mass_exclusion(ax, m, coupling_order):
                       edgecolor = 'k',
                       boxstyle = 'round,pad=.1')
     ax.text(pos_x, pos_y[coupling_order], txt, color = 'k', bbox = bbox_style)
+
+def label_critical_screening(ax, K_E, K_atm, coupling_type, filename):
+    """ Label critical screening lines """
+    distance_scales = ["10Mpc_", "10kpc_"]
+    
+    # Define labels for critical screening
+    crit_screening_labels = {
+        "photon": {
+            "eth": r'$d_{e,{\rm crit}}^{(2)\, \rm\oplus}$',
+            "atm": r'$d_{e,{\rm crit}}^{(2)\, \rm atm}$',
+            "exp": r'$d_{e,{\rm crit}}^{(2)\, \rm app}$'
+        },
+        "electron": {
+            "eth": r'$d_{m_e,{\rm crit}}^{(2)\, \rm\oplus}$',
+            "atm": r'$d_{m_e,{\rm crit}}^{(2)\, \rm atm}$',
+            "exp": r'$d_{m_e,{\rm crit}}^{(2)\, \rm app}$'
+        },
+        "gluon": {
+            "eth": r'$d_{g,{\rm crit}}^{(2)\, \rm\oplus}$',
+            "atm": r'$d_{g,{\rm crit}}^{(2)\, \rm atm}$',
+            "exp": r'$d_{g,{\rm crit}}^{(2)\, \rm app}$'
+        }
+    }
+    
+    # Define positions of text for critical screening
+    crit_screening_positions = {
+        "photon": {
+            "10Mpc_": {
+                "eth": (3e-13, 2e12/K_E),
+                "atm": (1e-12, 5e21/K_atm),
+                "exp": (5e-11, 7e25/K_E)
+            },
+            "10kpc_": {
+                "eth": (7e-15, 2e13/K_E),
+                "atm": (2e-12, 1e19/K_atm),
+                "exp": (5e-11, 7e25/K_E)
+            }
+        },
+        
+        "electron": {
+            "10Mpc_": {
+                "eth": (2e-13, 2e11/K_E),
+                "atm": (2e-12, 1e19/K_atm),
+                "exp": (1e-10, 7e25/K_E)
+            },
+            "10kpc_": {
+                "eth": (5e-15, 2e9/K_E),
+                "atm": (2e-13, 5e21/K_atm),
+                "exp": (5e-11, 7e25/K_E)
+            }
+        },
+        
+        "gluon": {
+            "10Mpc_": {
+                "eth": (2e-13, 2e11/K_E),
+                "atm": (2e-12, 1e19/K_atm),
+                "exp": (5e-12, 7e25/K_E)
+            },
+            "10kpc_": {
+                "eth": (2e-14, 2e9/K_E),
+                "atm": (2e-12, 1e19/K_atm),
+                "exp": (5e-11, 7e25/K_E)
+            }
+        }
+    }
+    
+    for prefix in distance_scales:
+        if filename.startswith(prefix):
+            pos = crit_screening_positions[coupling_type][prefix]
+            lbl = crit_screening_labels[coupling_type]
+            ax.text(*pos["eth"], lbl["eth"], fontsize = 35, color = 'tab:blue')
+            ax.text(*pos["atm"], lbl["atm"], fontsize = 35, color = 'tab:blue')
+            ax.text(*pos["exp"], lbl["exp"], fontsize = 35, color = 'tab:blue')
+            
+def plot_parameter_list(ax, i, j, coupling_type, coupling_order, filename):
+    """ Plot parameter lists in bottom right plot """
+    
+    # Only plot parameter list for bottom right subplot ax(1, 1)
+    if (i, j) != (1, 1): return
+    
+    distance_scales = ["10Mpc_", "10kpc_"]
+    
+    bbox_style = dict(facecolor='tab:purple', 
+                      alpha = 0.0, 
+                      edgecolor = 'white', 
+                      boxstyle='round,pad=.2')
+    
+    # Define positions for parameter list for different plots
+    parameter_list_positions = {
+        "photon": {
+            "10Mpc_": (1e-11, 1e7),
+            "10kpc_": (1e-11, 1e8)
+        },
+        "electron": {
+            "10Mpc_": (1e-10, 1e10),
+            "10kpc_": (1e-11, 1e10)
+        },
+        "gluon": {
+            "10Mpc_": (1e-11, 1e5),
+            "10kpc_": (1e-11, 1e7)
+        }
+    }
+    
+    # Define Etot in solar masses and R in parsecs
+    parameter_list = {
+        "photon": {
+            "10Mpc_": r'$E_{\rm tot} = M_{\odot}$'+ '\n' + r'$R = 10~{\rm Mpc}$',
+            "10kpc_": r'$E_{\rm tot} = 10^{-2} M_{\odot}$' + '\n' + r'$R = 10~{\rm kpc}$'
+        },
+        "electron": {
+            "10Mpc_": r'$E_{\rm tot} = M_{\odot}$' + '\n' + r'$R = 10~{\rm Mpc}$',
+            "10kpc_": r'$E_{\rm tot} = 10^{-2} M_{\odot}$' + '\n' + r'$R = 10~{\rm kpc}$'
+        },
+        "gluon": {
+            "10Mpc_": r'$E_{\rm tot} = M_{\odot}$'+'\n' +r'$R = 10~{\rm Mpc}$',
+            "10kpc_": r'$E_{\rm tot} = 10^{-2} M_{\odot}$' + '\n' + r'$R = 10~{\rm kpc}$'
+        }
+    }
+    
+    # Define eta_DM (sensitivity to DM signal) values for different fields
+    eta_DM = {
+        "photon": r'$\,\eta_{\rm DM} = 10^{-19}/5900$',
+        "electron": r'$\,\eta_{\rm DM} = 10^{-17}$',
+        "gluon": r'$\,\eta_{\rm DM} = 10^{-19}/10^5$'
+    }
+
+    for prefix in distance_scales:
+        if filename.startswith(prefix):
+            if coupling_order == "linear":
+                pos = (5e-12, 4e-9) if coupling_type == "photon" else (2e-11, 4e-9)
+            else:
+                pos = parameter_list_positions[coupling_type][prefix]
+            txt = parameter_list[coupling_type][prefix] + '\n' + eta_DM[coupling_type]
+            ax.text(*pos, txt, bbox = bbox_style)
