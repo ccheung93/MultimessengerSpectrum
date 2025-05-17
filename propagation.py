@@ -129,7 +129,7 @@ def calc_rescaling_factor(m_phi, w, t_star, R, aw, integration_time=1):
     
     return rescaling_factor
 
-def calc_rho(Etot, m_phi, w, t_star, R, aw):
+def calc_rho(Etot, m_phi, w, t_star, R, aw, axion=False):
     """ Calculate the energy density of phi at Earth in eV^4
     
     Args:
@@ -153,7 +153,7 @@ def calc_rho(Etot, m_phi, w, t_star, R, aw):
     dx_burst = t_star
     
     # Spread of the phi wave during propagation
-    q = w/m_phi
+    q = np.sqrt((w/m_phi)**2-1) if axion else w/m_phi # TODO - figure out where expression for q for axions comes from
     dx_spread = (dw/w)*(R/q**2)
     
     # Total spread of the wavepacket
@@ -164,7 +164,7 @@ def calc_rho(Etot, m_phi, w, t_star, R, aw):
     
     return rho
 
-def d_probe(w, rho, rescaling_factor, eta, order):
+def d_probe(w, rho, rescaling_factor, eta, order, axion=False):
     """ Calculate value of dilatonic coupling we can probe
 
     Args:
@@ -177,17 +177,23 @@ def d_probe(w, rho, rescaling_factor, eta, order):
     Returns:
         float: value of dilatonic coupling we can probe
     """
+    if axion:
+        rhoDM = 3.05e-6 #eV^4 what is this
+        d_DM = 2e-13 * (1e3/1.022) # TODO - what is this?
+        d = d_DM * AVG_VEL_DM * np.sqrt(rhoDM/rho) * rescaling_factor # TODO - check how this is derived, dimensions not equal (perhaps replace AVG_VEL_DM with velocity_ratio = v_DM/v_star = AVG_VEL_DM)
+        return d
+    
     if order == 1:
         phi = np.sqrt(rho)/(2*w)
-        d = eta*PLANCK_MASS_EV/(2*np.sqrt(PI)*phi) * rescaling_factor
+        d = eta*PLANCK_MASS_EV/(2*np.sqrt(PI)*phi) * rescaling_factor # TODO - check how this is derived (Eq. 47?)
     elif order == 2:
         phi = np.sqrt(2*rho)/w
-        d = eta*PLANCK_MASS_EV**2/(4*PI*phi**2) * rescaling_factor
+        d = eta*PLANCK_MASS_EV**2/(4*PI*phi**2) * rescaling_factor # TODO - check how this is derived (Eq. 48?)
     else:
         raise ValueError(f"Unsupported coupling order: {order}")
     return d
 
-def d_from_Lambda(Lambda, order): 
+def d_from_Lambda(Lambda, order, axion=False): # TODO - update docstring and digure out constants
     """ Calculate value of dilatonic coupling from Lambda for a given coupling order
     
     Args:
@@ -197,10 +203,12 @@ def d_from_Lambda(Lambda, order):
     Returns:
         float: dilatonic coupling calculated from a given Lambda value
     """
-    d = ((1/np.sqrt(4*PI))*(PLANCK_MASS_EV/Lambda))**order
-    return d
+    if axion:
+        return 1e-13 * (1e3/1.022) # TODO - what is this? NOTE - 1e-13 here, 2e-13 above in d_probe()
+    else:
+        return ((1/np.sqrt(4*PI))*(PLANCK_MASS_EV/Lambda))**order
 
-def d2_from_delta_t(dt, R, m, E, Dg, K):
+def d2_from_delta_t(dt, R, m, E, Dg, K, axion=False):
     """ Calculate value of quadratic dilatonic coupling from a time delay 
         (calculates d_i^(2) from Eq.39 in arXiv:2502.08716v1)
     
@@ -215,6 +223,12 @@ def d2_from_delta_t(dt, R, m, E, Dg, K):
     Returns:
         float: value of quadratic dilatonic coupling from a time delay
     """
+    if axion: # TODO - explain this
+        gamma = (dt * SPEED_OF_LIGHT) / (R * PC_TO_METERS) + 1
+        moverE = np.sqrt(1 - 1 / gamma**2)
+        Em = m / moverE
+        return [0 if Ei < Em else 1e100 for Ei in E]
+    
     # Galaxy number density [galaxies / Gpc^3]
     number_density = 0.006e9
     Ng = number_density * (R/GPC_TO_PC)**3
